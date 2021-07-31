@@ -30,6 +30,3 @@ harness = false
 [[bench]]
 name = "no_compile_benchmarks"
 harness = false
-
-[profile.dev]
-split-debuginfo = "unpacked"
