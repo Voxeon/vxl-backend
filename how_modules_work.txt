@@ -1,0 +1,6 @@
+How do modules work?
+1. Define a new module with "%mod module_name"
+2. Import functions and structs from a different module like so "%import function_1, function_2, struct_1, struct_2 from module_name"
+3. To call an imported function simply call the function like so @<module_name>function_1
+
+* Importing a function A from module MOD into another module MOD2 means that you CANNOT define a function A in MOD2. 
