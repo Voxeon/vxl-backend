@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use voxl_backend::lexer::Lexer;
+use vxl_backend::lexer::Lexer;
 
 fn tokenize(input: Vec<char>) {
     let lexer = Lexer::new(input);

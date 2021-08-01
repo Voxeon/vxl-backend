@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use voxl_backend::lexer::Lexer;
-use voxl_backend::parser::Parser;
+use vxl_backend::lexer::Lexer;
+use vxl_backend::parser::Parser;
 
 fn parse(input: Vec<char>) {
     let lexer = Lexer::new(input);

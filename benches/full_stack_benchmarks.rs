@@ -1,8 +1,8 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::collections::VecDeque;
-use voxl_backend::lexer::Lexer;
-use voxl_backend::parser::Parser;
-use voxl_backend::pre_processor::PreProcessor;
+use vxl_backend::lexer::Lexer;
+use vxl_backend::parser::Parser;
+use vxl_backend::pre_processor::PreProcessor;
 
 fn compile(input: Vec<char>) {
     let lexer = Lexer::new(input);
