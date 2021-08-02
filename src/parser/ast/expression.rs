@@ -17,6 +17,7 @@ pub enum ExpressionNode {
     AssignmentExpression(Expression, Token, Expression),
     GroupingExpression(Token, Expression),
     CallExpression(Token, Option<Token>, Token, Vec<Expression>), // keyword, module, name, arguments
+    ConstructorCallExpression(Token, Vec<Expression>),            // struct, arguments
 }
 
 #[inline]

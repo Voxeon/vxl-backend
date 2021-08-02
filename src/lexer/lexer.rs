@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use super::token::*;
-use crate::error::LexerError;6
+use crate::error::LexerError;
 
 #[derive(Debug)]
 pub struct Lexer {
@@ -54,6 +54,7 @@ impl Lexer {
                 ')' => self.add_token::<1>(TokenType::CloseRoundBraceToken),
                 '[' => self.add_token::<1>(TokenType::OpenSquareBraceToken),
                 ']' => self.add_token::<1>(TokenType::CloseSquareBraceToken),
+                '|' => self.add_token::<1>(TokenType::PipeToken),
                 '+' => self.add_token::<1>(TokenType::PlusToken),
                 '-' => match self.peek().map(|c| *c) {
                     Some('>') => {

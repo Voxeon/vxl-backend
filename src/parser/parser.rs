@@ -506,10 +506,10 @@ impl Parser {
             )));
         }
 
-        return self.parse_call();
+        return self.parse_function_call();
     }
 
-    fn parse_call(&mut self) -> ParserResult<Expression> {
+    fn parse_function_call(&mut self) -> ParserResult<Expression> {
         if self.matches(TokenType::AtToken) {
             let indicator = self.consume_token_one([TokenType::AtToken])?;
 
@@ -559,6 +559,33 @@ impl Parser {
                 indicator,
                 module_name,
                 function_name,
+                arguments,
+            )));
+        }
+
+        return self.parse_constructor_call();
+    }
+
+    fn parse_constructor_call(&mut self) -> ParserResult<Expression> {
+        if self.matches(TokenType::PipeToken) {
+            self.consume_token_one([TokenType::PipeToken])?;
+
+            let struct_name = self.consume_token_one([TokenType::IdentifierToken])?;
+
+            let mut arguments = Vec::new();
+
+            while !self.matches(TokenType::PipeToken) {
+                arguments.push(self.parse_expression()?);
+
+                if !self.matches(TokenType::PipeToken) {
+                    self.consume_token_one([TokenType::CommaToken])?;
+                }
+            }
+
+            self.consume_token_one([TokenType::PipeToken])?;
+
+            return Ok(new_expression(ExpressionNode::ConstructorCallExpression(
+                struct_name,
                 arguments,
             )));
         }
@@ -1397,7 +1424,7 @@ mod tests {
         }
     }
 
-    mod test_call {
+    mod test_function_call {
         use super::*;
 
         #[test]
@@ -1495,6 +1522,50 @@ mod tests {
                 vec![new_expression(ExpressionNode::LiteralExpression(
                     Value::Integer(22),
                 ))],
+            ));
+
+            let mut parser = new_default_parser(tokens);
+            assert_eq!(parser.parse_expression().unwrap(), cmp);
+        }
+    }
+
+    mod test_constructor_call {
+        use super::*;
+
+        #[test]
+        fn test_no_arg_call() {
+            let tokens = new_tokens([
+                (TokenType::PipeToken, "|"),
+                (TokenType::IdentifierToken, "container"),
+                (TokenType::PipeToken, "|"),
+            ]);
+
+            let cmp = new_expression(ExpressionNode::ConstructorCallExpression(
+                tokens[1].clone(),
+                Vec::new(),
+            ));
+
+            let mut parser = new_default_parser(tokens);
+            assert_eq!(parser.parse_expression().unwrap(), cmp);
+        }
+
+        #[test]
+        fn test_multi_arg_call() {
+            let tokens = new_tokens([
+                (TokenType::PipeToken, "|"),
+                (TokenType::IdentifierToken, "container"),
+                (TokenType::IntegerLiteralToken, "52"),
+                (TokenType::CommaToken, ","),
+                (TokenType::IntegerLiteralToken, "53"),
+                (TokenType::PipeToken, "|"),
+            ]);
+
+            let cmp = new_expression(ExpressionNode::ConstructorCallExpression(
+                tokens[1].clone(),
+                vec![
+                    new_expression(ExpressionNode::LiteralExpression(Value::Integer(52))),
+                    new_expression(ExpressionNode::LiteralExpression(Value::Integer(53))),
+                ],
             ));
 
             let mut parser = new_default_parser(tokens);
@@ -2293,7 +2364,7 @@ mod tests {
         }
     }
 
-    mod test_struct_defintion {
+    mod test_struct_definition {
         use super::*;
 
         #[test]
