@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use super::token::*;
-use crate::error::LexerError;
+use crate::error::LexerError;6
 
 #[derive(Debug)]
 pub struct Lexer {

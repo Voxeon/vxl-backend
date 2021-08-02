@@ -1,0 +1,5 @@
+* Fix struct parsing/lexing
+    - Choose between constructors
+    - Default values
+    - Struct initialisation
+* Add compilation support
