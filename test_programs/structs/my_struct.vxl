@@ -1,0 +1,12 @@
+%begin structs
+
+struct Numeric
+    is_integer (bool)
+    integer (int)
+    double (float)
+end(struct)
+
+struct Container
+    length (Numeric<structs>)
+    width (Numeric<structs>)
+end(struct)
