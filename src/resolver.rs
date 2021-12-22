@@ -61,7 +61,7 @@ impl Resolver {
 
     fn run_resolution(mut self) -> ResolverResult<Resolution> {
         if self.modules.contains_key(ROOT_MODULE_NAME) {
-            self.process_module(ROOT_MODULE_NAME)?;
+            self.process_module(ROOT_MODULE_NAME.to_string())?;
 
             return Ok(self.merge());
         } else {
@@ -73,8 +73,8 @@ impl Resolver {
         todo!();
     }
 
-    fn process_module(&mut self, module_name: &str) -> ResolverResult<()> {
-        if let Some(module) = self.modules.remove(module_name) {
+    fn process_module(&mut self, module_name: String) -> ResolverResult<()> {
+        if let Some(module) = self.modules.remove(&module_name) {
             // Check high level imports
             let imports = self.import_check(&module)?;
 
@@ -85,7 +85,7 @@ impl Resolver {
                 .insert(module_name.to_string(), module);
 
             for import in imports {
-                self.process_module(import.lexeme())?;
+                self.process_module(import)?;
             }
         } else {
             panic!();
@@ -94,10 +94,10 @@ impl Resolver {
         todo!();
     }
 
-    fn import_check(&mut self, module: &CompilableModule) -> ResolverResult<HashSet<Token>> {
+    fn import_check(&mut self, module: &CompilableModule) -> ResolverResult<HashSet<String>> {
         fn handle_module_found(
             missing_modules_errors: &mut Vec<ResolverError>,
-            required_modules: &mut HashSet<Token>,
+            required_modules: &mut HashSet<String>,
             import: &ObjectName,
             referenced_module: &CompilableModule,
         ) {
@@ -106,7 +106,7 @@ impl Resolver {
                 .contains_key(import.name.lexeme())
                 && referenced_module.structs.contains_key(import.name.lexeme())
             {
-                required_modules.insert(import.name.clone());
+                required_modules.insert(import.name.lexeme().clone());
             } else {
                 missing_modules_errors.push(ResolverError::NoObjectDefined(
                     import.name.clone(),
@@ -166,10 +166,14 @@ impl Resolver {
         todo!();
     }
 
-    fn depth_resolution(&mut self, module: &CompilableModule, imports: &HashSet<Token>) {
+    fn depth_resolution(&mut self, module: &CompilableModule, imports: &HashSet<String>) {
         // Check struct field types
         for (_name, struct_definition) in &module.structs {
-            for (_name, field) in &struct_definition.fields {}
+            for (_name, field) in &struct_definition.fields {
+                if !self.is_valid_type(&field.tp, &module.name, Some(imports)) {
+                    todo!();
+                }
+            }
         }
 
         // Check types and names
@@ -178,16 +182,32 @@ impl Resolver {
         todo!();
     }
 
-    fn is_valid_type(&self, tp: &Type, imports: Option<&HashSet<Token>>) -> bool {
+    fn is_valid_type(&self, tp: &Type, current_module: &str, imports: Option<&HashSet<String>>) -> bool {
         if let Type::Array(nested) = tp {
-            return self.is_valid_type(nested, imports);
+            return self.is_valid_type(nested, current_module, imports);
         } else if let Type::Struct(name, module) = tp {
             if let Some(imports) = imports {
-                if imports.
+                if imports.contains(module) || module == current_module {
+                    let m = self.lookup_module(module).unwrap();
+
+                    return m.structs.contains_key(name);
+                }
             }
+
+            return false;
         } else {
             return true;
         }
+    }
+
+    fn lookup_module(&self, name: &str) -> Option<&CompilableModule> {
+        let mut m = self.processed_modules.get(name);
+
+        if m.is_none() {
+            m = self.modules.get(name);
+        }
+
+        return m;
     }
 }
 
