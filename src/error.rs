@@ -1,4 +1,5 @@
 use crate::lexer::token::Token;
+use crate::ROOT_MODULE_NAME;
 use std::error::Error as ErrorTrait;
 use std::fmt;
 
@@ -35,6 +36,7 @@ pub enum ParserError {
     InvalidAssignmentTarget(Token),
     UnterminatedBlock(Token),
     InvalidPreProcessorCommand(Token),
+    FieldAlreadyDefinedForStruct(String, Token),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -42,6 +44,14 @@ pub enum PreProcessorError {
     NoRootModuleDefined,
     ModuleAlreadyDefined(Token, Token),
     NoCurrentModuleDefined(Token),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ResolverError {
+    NoRootModuleDefined,
+    NoModuleDefined(Token),
+    NoObjectDefined(Token, Token),
+    Multiple(Vec<ResolverError>),
 }
 
 impl<BE: ErrorTrait> VoxlError<BE> {
@@ -150,6 +160,8 @@ impl fmt::Display for LexerError {
 
 impl ErrorTrait for LexerError {}
 
+impl ErrorTrait for ParserError {}
+
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         return match self {
@@ -182,6 +194,13 @@ impl fmt::Display for ParserError {
             ParserError::InvalidPreProcessorCommand(tok) => {
                 write!(f, "Invalid pre-processor command. {}", tok)
             }
+            ParserError::FieldAlreadyDefinedForStruct(field_name, struct_name) => {
+                write!(
+                    f,
+                    "The field with the name: \'{}\', has already been defined for this struct. {}",
+                    field_name, struct_name
+                )
+            }
         };
     }
 }
@@ -194,7 +213,8 @@ impl fmt::Display for PreProcessorError {
             PreProcessorError::NoRootModuleDefined => {
                 write!(
                     f,
-                    "No \"root\" module defined.\nStart the first file with `%begin root`"
+                    "No \"{}\" module defined.\nStart the first file with `%begin {}`",
+                    ROOT_MODULE_NAME, ROOT_MODULE_NAME
                 )
             }
             PreProcessorError::ModuleAlreadyDefined(new, original) => {
@@ -203,12 +223,51 @@ impl fmt::Display for PreProcessorError {
             PreProcessorError::NoCurrentModuleDefined(tok) => {
                 write!(
                     f,
-                    "No \"root\" module defined.\nStart a new module with `%begin`. {}",
-                    tok
+                    "No \"{}\" module defined.\nStart a new module with `%begin`. {}",
+                    ROOT_MODULE_NAME, tok
                 )
             }
         };
     }
 }
 
-impl ErrorTrait for ParserError {}
+impl ErrorTrait for ResolverError {}
+
+impl fmt::Display for ResolverError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        return match self {
+            ResolverError::NoRootModuleDefined => {
+                write!(
+                    f,
+                    "No \"{}\" module defined.\nStart the first file with `%begin {}`",
+                    ROOT_MODULE_NAME, ROOT_MODULE_NAME
+                )
+            }
+            ResolverError::Multiple(errs) => {
+                write!(
+                    f,
+                    "{}",
+                    errs.iter()
+                        .map(|e| [e.to_string(), String::from("\n")].join(""))
+                        .collect::<String>()
+                )
+            }
+            ResolverError::NoModuleDefined(m) => {
+                write!(
+                    f,
+                    "No \"{}\" module defined.\nStart a module with `%begin {}`",
+                    m.lexeme(),
+                    m.lexeme()
+                )
+            }
+            ResolverError::NoObjectDefined(o, m) => {
+                write!(
+                    f,
+                    "No object called \"{}\" is defined in the module \"{}\".",
+                    o.lexeme(),
+                    m.lexeme()
+                )
+            }
+        };
+    }
+}

@@ -3,3 +3,7 @@
     - Default values
     - Struct initialisation
 * Add compilation support
+* Check where return types are enforced.
+* Check where variable types are enforced.
+* Check where function calls are properly enforced
+* Check where 

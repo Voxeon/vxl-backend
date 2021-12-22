@@ -1,0 +1,6 @@
+Functions are always pass by reference.
+Explicitly free structs and arrays
+Everything is a reference/pointer
+
+Each binary operation we will compute lhs -> store on stack, compute rhs -> store on stack
+compute result -> store on the stack

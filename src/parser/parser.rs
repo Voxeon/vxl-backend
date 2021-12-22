@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::ast::*;
 use crate::error::ParserError;
 use crate::lexer::token::{Token, TokenType};
@@ -155,10 +157,15 @@ impl Parser {
         let name = self.consume_token_one([TokenType::IdentifierToken])?;
         self.consume_token_one([TokenType::NewLineToken])?;
 
-        let mut fields = Vec::new();
+        let mut fields = HashMap::new();
 
         while !self.matches(TokenType::EndToken) {
-            fields.push(self.parse_field()?);
+            let field = self.parse_field()?;
+            let field_name = field.name.clone();
+
+            if fields.insert(field_name.clone(), field).is_some() {
+                return Err(ParserError::FieldAlreadyDefinedForStruct(field_name, name));
+            }
 
             self.consume_token_one([TokenType::NewLineToken])?;
         }
@@ -190,7 +197,17 @@ impl Parser {
             "char" | "character" => Type::Character,
             "float" => Type::Float,
             "bool" | "boolean" => Type::Boolean,
-            _ => Type::Struct(name.lexeme().clone()),
+            _ => {
+                // consume module
+                // <
+                self.consume_token_one([TokenType::LessThanToken])?;
+                // module name
+                let module = self.consume_token_one([TokenType::IdentifierToken])?;
+                // >
+                self.consume_token_one([TokenType::GreaterThanToken])?;
+
+                Type::Struct(name.lexeme().clone(), module.lexeme().clone())
+            }
         };
 
         return Ok(tp);
@@ -572,6 +589,16 @@ impl Parser {
 
             let struct_name = self.consume_token_one([TokenType::IdentifierToken])?;
 
+            let module_name = if self.matches(TokenType::LessThanToken) {
+                self.consume_token_one([TokenType::LessThanToken])?;
+                let module_name = self.consume_token_one([TokenType::IdentifierToken])?;
+                self.consume_token_one([TokenType::GreaterThanToken])?;
+
+                Some(module_name)
+            } else {
+                None
+            };
+
             let mut arguments = Vec::new();
 
             while !self.matches(TokenType::PipeToken) {
@@ -586,6 +613,7 @@ impl Parser {
 
             return Ok(new_expression(ExpressionNode::ConstructorCallExpression(
                 struct_name,
+                module_name,
                 arguments,
             )));
         }
@@ -746,6 +774,14 @@ mod tests {
         new_expression, new_statement, ArrayLiteral, ExpressionNode, Field, Parser, ParserError,
         PreProcessorCommand, StatementNode, Token, TokenType, Type, Value, Variable, AST,
     };
+
+    use std::collections::HashMap;
+
+    macro_rules! hashmap {
+        [$($k:expr ; $v:expr),*] => {
+            vec![$(($k, $v)),*].into_iter().collect()
+        };
+    }
 
     #[inline]
     fn new_tokens<const N: usize>(contents: [(TokenType, &str); N]) -> Vec<Token> {
@@ -1542,6 +1578,7 @@ mod tests {
 
             let cmp = new_expression(ExpressionNode::ConstructorCallExpression(
                 tokens[1].clone(),
+                None,
                 Vec::new(),
             ));
 
@@ -1550,7 +1587,7 @@ mod tests {
         }
 
         #[test]
-        fn test_multi_arg_call() {
+        fn test_multi_arg_constructor_call() {
             let tokens = new_tokens([
                 (TokenType::PipeToken, "|"),
                 (TokenType::IdentifierToken, "container"),
@@ -1562,6 +1599,34 @@ mod tests {
 
             let cmp = new_expression(ExpressionNode::ConstructorCallExpression(
                 tokens[1].clone(),
+                None,
+                vec![
+                    new_expression(ExpressionNode::LiteralExpression(Value::Integer(52))),
+                    new_expression(ExpressionNode::LiteralExpression(Value::Integer(53))),
+                ],
+            ));
+
+            let mut parser = new_default_parser(tokens);
+            assert_eq!(parser.parse_expression().unwrap(), cmp);
+        }
+
+        #[test]
+        fn test_multi_arg_module_constructor_call() {
+            let tokens = new_tokens([
+                (TokenType::PipeToken, "|"),
+                (TokenType::IdentifierToken, "container"),
+                (TokenType::LessThanToken, "<"),
+                (TokenType::IdentifierToken, "std_conts"),
+                (TokenType::GreaterThanToken, ">"),
+                (TokenType::IntegerLiteralToken, "52"),
+                (TokenType::CommaToken, ","),
+                (TokenType::IntegerLiteralToken, "53"),
+                (TokenType::PipeToken, "|"),
+            ]);
+
+            let cmp = new_expression(ExpressionNode::ConstructorCallExpression(
+                tokens[1].clone(),
+                Some(tokens[3].clone()),
                 vec![
                     new_expression(ExpressionNode::LiteralExpression(Value::Integer(52))),
                     new_expression(ExpressionNode::LiteralExpression(Value::Integer(53))),
@@ -2383,7 +2448,7 @@ mod tests {
             let cmp = new_statement(StatementNode::StructStatement(
                 tokens[0].clone(),
                 tokens[1].clone(),
-                Vec::new(),
+                HashMap::new(),
             ));
             let mut parser = new_default_parser(tokens);
 
@@ -2411,7 +2476,7 @@ mod tests {
             let cmp = new_statement(StatementNode::StructStatement(
                 tokens[0].clone(),
                 tokens[1].clone(),
-                vec![Field {
+                hashmap!["field_a".to_string() ; Field {
                     tp: Type::Integer,
                     name: "field_a".to_string(),
                 }],
@@ -2457,28 +2522,114 @@ mod tests {
             let cmp = new_statement(StatementNode::StructStatement(
                 tokens[0].clone(),
                 tokens[1].clone(),
-                vec![
-                    Field {
+                hashmap![
+                    "field_a".to_string() ; Field {
                         tp: Type::Integer,
                         name: "field_a".to_string(),
                     },
-                    Field {
+                    "field_b".to_string() ; Field {
                         tp: Type::Boolean,
                         name: "field_b".to_string(),
                     },
-                    Field {
+                    "field_c".to_string() ; Field {
                         tp: Type::Character,
                         name: "field_c".to_string(),
                     },
-                    Field {
+                    "field_d".to_string() ; Field {
                         tp: Type::Float,
                         name: "field_d".to_string(),
-                    },
+                    }
                 ],
             ));
             let mut parser = new_default_parser(tokens);
 
             assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
+        }
+
+        #[test]
+        fn test_struct_definition_struct_fields() {
+            let tokens = new_tokens([
+                (TokenType::StructToken, "struct"),
+                (TokenType::IdentifierToken, "my_struct"),
+                (TokenType::NewLineToken, "\n"),
+                (TokenType::IdentifierToken, "field_a"),
+                (TokenType::OpenRoundBraceToken, "("),
+                (TokenType::IdentifierToken, "int"),
+                (TokenType::CloseRoundBraceToken, ")"),
+                (TokenType::NewLineToken, "\n"),
+                (TokenType::IdentifierToken, "field_b"),
+                (TokenType::OpenRoundBraceToken, "("),
+                (TokenType::IdentifierToken, "string"),
+                (TokenType::LessThanToken, "<"),
+                (TokenType::IdentifierToken, "std"),
+                (TokenType::GreaterThanToken, ">"),
+                (TokenType::CloseRoundBraceToken, ")"),
+                (TokenType::NewLineToken, "\n"),
+                (TokenType::EndToken, "end"),
+                (TokenType::OpenRoundBraceToken, "("),
+                (TokenType::StructToken, "struct"),
+                (TokenType::CloseRoundBraceToken, ")"),
+                (TokenType::NewLineToken, "\n"),
+            ]);
+
+            let cmp = new_statement(StatementNode::StructStatement(
+                tokens[0].clone(),
+                tokens[1].clone(),
+                hashmap![
+                    "field_a".to_string() ; Field {
+                        tp: Type::Integer,
+                        name: "field_a".to_string(),
+                    },
+                    "field_b".to_string() ; Field {
+                        tp: Type::Struct("string".to_string(), "std".to_string()),
+                        name: "field_b".to_string(),
+                    }
+                ],
+            ));
+            let mut parser = new_default_parser(tokens);
+
+            assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
+        }
+
+        #[test]
+        fn test_struct_definition_duplicate_struct_fields() {
+            let tokens = new_tokens([
+                (TokenType::StructToken, "struct"),
+                (TokenType::IdentifierToken, "my_struct"),
+                (TokenType::NewLineToken, "\n"),
+                (TokenType::IdentifierToken, "field_a"),
+                (TokenType::OpenRoundBraceToken, "("),
+                (TokenType::IdentifierToken, "int"),
+                (TokenType::CloseRoundBraceToken, ")"),
+                (TokenType::NewLineToken, "\n"),
+                (TokenType::IdentifierToken, "field_b"),
+                (TokenType::OpenRoundBraceToken, "("),
+                (TokenType::IdentifierToken, "string"),
+                (TokenType::LessThanToken, "<"),
+                (TokenType::IdentifierToken, "std"),
+                (TokenType::GreaterThanToken, ">"),
+                (TokenType::CloseRoundBraceToken, ")"),
+                (TokenType::NewLineToken, "\n"),
+                (TokenType::IdentifierToken, "field_b"),
+                (TokenType::OpenRoundBraceToken, "("),
+                (TokenType::IdentifierToken, "decimals"),
+                (TokenType::LessThanToken, "<"),
+                (TokenType::IdentifierToken, "math"),
+                (TokenType::GreaterThanToken, ">"),
+                (TokenType::CloseRoundBraceToken, ")"),
+                (TokenType::NewLineToken, "\n"),
+                (TokenType::EndToken, "end"),
+                (TokenType::OpenRoundBraceToken, "("),
+                (TokenType::StructToken, "struct"),
+                (TokenType::CloseRoundBraceToken, ")"),
+                (TokenType::NewLineToken, "\n"),
+            ]);
+
+            let cmp =
+                ParserError::FieldAlreadyDefinedForStruct("field_b".to_string(), tokens[1].clone());
+            let mut parser = new_default_parser(tokens);
+
+            assert_eq!(parser.parse_top_level_statement().unwrap_err(), cmp);
         }
     }
 

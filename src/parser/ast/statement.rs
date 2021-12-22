@@ -2,6 +2,7 @@ use super::{Expression, Type};
 use crate::lexer::token::Token;
 use crate::pre_processor::PreProcessorCommand;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 pub type Statement = Rc<RefCell<StatementNode>>;
@@ -29,7 +30,7 @@ pub enum StatementNode {
     ), // symbol, variable name, start, stop, step, body
     IfStatement(Token, Expression, Vec<Statement>, Option<Vec<Statement>>),
     FunctionStatement(Token, Token, Vec<Field>, Option<Type>, Vec<Statement>), // keyword, name, arguments, return type, body
-    StructStatement(Token, Token, Vec<Field>),
+    StructStatement(Token, Token, HashMap<String, Field>), // keyword name, fields
     PreProcessorCommandStatement(Token, PreProcessorCommand),
 }
 

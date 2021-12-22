@@ -1,0 +1,7 @@
+%begin root
+
+func main -> int
+    $a <- 5 + 2
+
+    return $a
+end(func)

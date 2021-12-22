@@ -2,6 +2,8 @@ use super::PreProcessorCommand;
 use crate::error::PreProcessorError;
 use crate::lexer::token::Token;
 use crate::parser::ast::{Field, Statement, StatementNode, AST};
+use crate::ROOT_MODULE_NAME;
+
 use std::collections::{HashMap, VecDeque};
 
 type PreProcessorResult<T> = Result<T, PreProcessorError>;
@@ -15,7 +17,7 @@ pub struct ObjectName {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructDefinition {
     pub(crate) name: String,
-    pub(crate) fields: Vec<Field>,
+    pub(crate) fields: HashMap<String, Field>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -61,7 +63,7 @@ impl PreProcessor {
                             _,
                             PreProcessorCommand::BeginModuleCommand(module_name),
                         ) => {
-                            if module_name.lexeme() != "root" {
+                            if module_name.lexeme() != ROOT_MODULE_NAME {
                                 return Err(PreProcessorError::NoRootModuleDefined);
                             } else {
                                 self.current_module_name = Some(module_name.clone());
@@ -184,11 +186,12 @@ impl PreProcessor {
             panic!("Expected function definition statement.");
         };
 
-        let name = stmt.borrow().borrow_function_name().lexeme().clone();
-
         if let Some(funcs) = self.functions.get_mut(&module) {
+            let name = stmt.borrow().borrow_function_name().lexeme().clone();
             funcs.push((name, stmt));
         } else {
+            let name = stmt.borrow().borrow_function_name().lexeme().clone();
+
             self.functions.insert(module, vec![(name, stmt)]);
         }
 
@@ -243,7 +246,7 @@ mod tests {
         root_ast.push_statement(new_statement(StatementNode::PreProcessorCommandStatement(
             Token::new_identifier("begin".to_string(), 1, 1, None),
             PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
-                "root".to_string(),
+                ROOT_MODULE_NAME.to_string(),
                 1,
                 1,
                 None,
@@ -266,8 +269,8 @@ mod tests {
 
         assert_eq!(
             processor.process().unwrap(),
-            hashmap!["root".to_string() ; CompilableModule {
-                name: "root".to_string(),
+            hashmap![ROOT_MODULE_NAME.to_string() ; CompilableModule {
+                name: ROOT_MODULE_NAME.to_string(),
                 imports: Vec::new(),
                 functions: hashmap!["main".to_string() ; main_function_stmt],
                 structs: HashMap::new(),
@@ -283,7 +286,7 @@ mod tests {
         root_ast.push_statement(new_statement(StatementNode::PreProcessorCommandStatement(
             Token::new_identifier("begin".to_string(), 1, 1, None),
             PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
-                "root".to_string(),
+                ROOT_MODULE_NAME.to_string(),
                 1,
                 1,
                 None,
@@ -293,7 +296,7 @@ mod tests {
         let my_struct_stmt = new_statement(StatementNode::StructStatement(
             Token::new_identifier("struct".to_string(), 2, 1, None),
             Token::new_identifier("my_struct".to_string(), 0, 0, None),
-            Vec::new(),
+            HashMap::new(),
         ));
 
         root_ast.push_statement(my_struct_stmt.clone());
@@ -304,13 +307,13 @@ mod tests {
 
         assert_eq!(
             processor.process().unwrap(),
-            hashmap!["root".to_string() ; CompilableModule {
-                name: "root".to_string(),
+            hashmap![ROOT_MODULE_NAME.to_string() ; CompilableModule {
+                name: ROOT_MODULE_NAME.to_string(),
                 imports: Vec::new(),
                 functions: HashMap::new(),
                 structs: hashmap!["my_struct".to_string() ; StructDefinition {
                     name: "my_struct".to_string(),
-                    fields: Vec::new(),
+                    fields: HashMap::new(),
                 }],
             }]
         );
@@ -324,7 +327,7 @@ mod tests {
         root_ast.push_statement(new_statement(StatementNode::PreProcessorCommandStatement(
             Token::new_identifier("begin".to_string(), 1, 1, None),
             PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
-                "root".to_string(),
+                ROOT_MODULE_NAME.to_string(),
                 1,
                 1,
                 None,
@@ -345,8 +348,8 @@ mod tests {
 
         assert_eq!(
             processor.process().unwrap(),
-            hashmap!["root".to_string() ; CompilableModule {
-                name: "root".to_string(),
+            hashmap![ROOT_MODULE_NAME.to_string() ; CompilableModule {
+                name: ROOT_MODULE_NAME.to_string(),
                 imports: vec![ObjectName {
                     module: module,
                     name: import_a,
@@ -365,7 +368,7 @@ mod tests {
         root_ast.push_statement(new_statement(StatementNode::PreProcessorCommandStatement(
             Token::new_identifier("begin".to_string(), 1, 1, None),
             PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
-                "root".to_string(),
+                ROOT_MODULE_NAME.to_string(),
                 1,
                 1,
                 None,
@@ -385,7 +388,7 @@ mod tests {
         let my_struct_stmt = new_statement(StatementNode::StructStatement(
             Token::new_identifier("struct".to_string(), 2, 1, None),
             Token::new_identifier("my_struct".to_string(), 0, 0, None),
-            Vec::new(),
+            HashMap::new(),
         ));
 
         root_ast.push_statement(my_struct_stmt.clone());
@@ -396,13 +399,13 @@ mod tests {
 
         assert_eq!(
             processor.process().unwrap(),
-            hashmap!["root".to_string() ; CompilableModule {
-                name: "root".to_string(),
+            hashmap![ROOT_MODULE_NAME.to_string() ; CompilableModule {
+                name: ROOT_MODULE_NAME.to_string(),
                 imports: Vec::new(),
                 functions: hashmap!["main".to_string() ; main_function_stmt],
                 structs: hashmap!["my_struct".to_string() ; StructDefinition {
                     name: "my_struct".to_string(),
-                    fields: Vec::new(),
+                    fields: HashMap::new(),
                 }],
             }]
         );
@@ -417,7 +420,7 @@ mod tests {
         root_ast.push_statement(new_statement(StatementNode::PreProcessorCommandStatement(
             Token::new_identifier("begin".to_string(), 1, 1, None),
             PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
-                "root".to_string(),
+                ROOT_MODULE_NAME.to_string(),
                 1,
                 1,
                 None,
@@ -437,7 +440,7 @@ mod tests {
         let my_struct_stmt = new_statement(StatementNode::StructStatement(
             Token::new_identifier("struct".to_string(), 2, 1, None),
             Token::new_identifier("my_struct".to_string(), 0, 0, None),
-            Vec::new(),
+            HashMap::new(),
         ));
 
         root_ast.push_statement(my_struct_stmt.clone());
@@ -465,7 +468,7 @@ mod tests {
         let second_struct_stmt = new_statement(StatementNode::StructStatement(
             Token::new_identifier("struct".to_string(), 2, 1, None),
             Token::new_identifier("my_second_struct".to_string(), 0, 0, None),
-            Vec::new(),
+            HashMap::new(),
         ));
 
         second_ast.push_statement(second_struct_stmt.clone());
@@ -477,13 +480,13 @@ mod tests {
 
         assert_eq!(
             processor.process().unwrap(),
-            hashmap!["root".to_string() ; CompilableModule {
-                name: "root".to_string(),
+            hashmap![ROOT_MODULE_NAME.to_string() ; CompilableModule {
+                name: ROOT_MODULE_NAME.to_string(),
                 imports: Vec::new(),
                 functions: hashmap!["main".to_string() ; main_function_stmt],
                 structs: hashmap!["my_struct".to_string() ; StructDefinition {
                     name: "my_struct".to_string(),
-                    fields: Vec::new(),
+                    fields: HashMap::new(),
                 }],
             }, "second".to_string() ; CompilableModule {
                 name: "second".to_string(),
@@ -491,7 +494,7 @@ mod tests {
                 functions: hashmap!["second".to_string() ; second_function_stmt],
                 structs: hashmap!["my_second_struct".to_string() ; StructDefinition {
                     name: "my_second_struct".to_string(),
-                    fields: Vec::new(),
+                    fields: HashMap::new(),
                 }],
             }]
         );

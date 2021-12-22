@@ -4,3 +4,11 @@ How do modules work?
 3. To call an imported function simply call the function like so @<module_name>function_1
 
 * Importing a function A from module MOD into another module MOD2 means that you CANNOT define a function A in MOD2. 
+* You cannot have two modules with the same name
+
+--- Calling Conventions
+To call a function in the current module
+@function_name(args)
+
+To call a function imported into the current module:
+@<module_name>function_name()
