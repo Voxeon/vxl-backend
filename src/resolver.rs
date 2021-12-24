@@ -1,8 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::error::ResolverError;
-use crate::lexer::token::Token;
-use crate::parser::ast::{Field, Statement, Type};
+use crate::parser::ast::{Statement, Type};
 use crate::pre_processor::{CompilableModule, ObjectName};
 use crate::ROOT_MODULE_NAME;
 
@@ -79,7 +78,7 @@ impl Resolver {
             let imports = self.import_check(&module)?;
 
             // Check every variable reference and function call types and names
-            self.depth_resolution(&module, &imports);
+            self.depth_resolution(&module, &imports)?;
 
             self.processed_modules
                 .insert(module_name.to_string(), module);
@@ -166,38 +165,78 @@ impl Resolver {
         todo!();
     }
 
-    fn depth_resolution(&mut self, module: &CompilableModule, imports: &HashSet<String>) {
+    fn depth_resolution(
+        &mut self,
+        module: &CompilableModule,
+        imports: &HashSet<String>,
+    ) -> ResolverResult<()> {
         // Check struct field types
-        for (_name, struct_definition) in &module.structs {
+        for (struct_name, struct_definition) in &module.structs {
             for (_name, field) in &struct_definition.fields {
-                if !self.is_valid_type(&field.tp, &module.name, Some(imports)) {
-                    todo!();
-                }
+                self.is_valid_type(&field.tp, Some(struct_name), &module.name, Some(imports))?;
             }
         }
 
-        // Check types and names
+        for (name, function_statement) in &module.functions {
+            self.check_function(name, function_statement, &module.name)?;
+        }
 
-        // Check names
-        todo!();
+        return Ok(());
     }
 
-    fn is_valid_type(&self, tp: &Type, current_module: &str, imports: Option<&HashSet<String>>) -> bool {
+    fn is_valid_type(
+        &self,
+        tp: &Type,
+        current_struct: Option<&String>,
+        current_module: &str,
+        imports: Option<&HashSet<String>>,
+    ) -> ResolverResult<()> {
         if let Type::Array(nested) = tp {
-            return self.is_valid_type(nested, current_module, imports);
+            return self.is_valid_type(nested, current_struct, current_module, imports);
         } else if let Type::Struct(name, module) = tp {
-            if let Some(imports) = imports {
-                if imports.contains(module) || module == current_module {
-                    let m = self.lookup_module(module).unwrap();
-
-                    return m.structs.contains_key(name);
+            let found_module = {
+                if let Some(imports) = imports {
+                    imports.contains(module) || module == current_module
+                } else {
+                    module == current_module
                 }
-            }
+            };
 
-            return false;
+            if found_module {
+                let m = self.lookup_module(module).unwrap();
+
+                if m.structs.contains_key(name) {
+                    return Ok(());
+                } else {
+                    if let Some(s) = current_struct {
+                        return Err(ResolverError::NoModuleDefinedWithNameInStruct(
+                            module.clone(),
+                            s.clone(),
+                        ));
+                    } else {
+                        return Err(ResolverError::NoModuleDefinedWithName(module.clone()));
+                    }
+                }
+            } else {
+                return Err(ResolverError::ModuleNotImported(
+                    module.clone(),
+                    current_module.to_string(),
+                ));
+            }
         } else {
-            return true;
+            return Ok(());
         }
+    }
+
+    fn check_function(
+        &self,
+        function_name: &str,
+        function_statement: &Statement,
+        current_module: &str,
+    ) -> ResolverResult<()> {
+        todo!();
+
+        return Ok(());
     }
 
     fn lookup_module(&self, name: &str) -> Option<&CompilableModule> {

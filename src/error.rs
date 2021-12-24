@@ -50,7 +50,12 @@ pub enum PreProcessorError {
 pub enum ResolverError {
     NoRootModuleDefined,
     NoModuleDefined(Token),
+    NoModuleDefinedWithName(String),                 // Module
+    NoObjectDefinedWithNameInModule(String, String), // object, module
+    NoModuleDefinedWithNameInStruct(String, String), // Module, struct
+    NoObjectDefinedWithNameInModuleInStruct(String, String, String), // object, module, struct
     NoObjectDefined(Token, Token),
+    ModuleNotImported(String, String), // import module, current module
     Multiple(Vec<ResolverError>),
 }
 
@@ -266,6 +271,46 @@ impl fmt::Display for ResolverError {
                     "No object called \"{}\" is defined in the module \"{}\".",
                     o.lexeme(),
                     m.lexeme()
+                )
+            }
+            ResolverError::NoModuleDefinedWithNameInStruct(m, s) => {
+                write!(
+                    f,
+                    "No \"{}\" module defined. Referenced in the definition of the struct \"{}\".\nStart a module with `%begin {}`",
+                    m,
+                    s,
+                    m
+                )
+            }
+            ResolverError::NoObjectDefinedWithNameInModuleInStruct(o, m, s) => {
+                write!(
+                    f,
+                    "No object called \"{}\" is defined in the module \"{}\".\nReferenced in the definition of the struct \"{}\".",
+                    o,
+                    m,
+                    s
+                )
+            }
+            ResolverError::NoModuleDefinedWithName(m) => {
+                write!(
+                    f,
+                    "No \"{}\" module defined.\nStart a module with `%begin {}`",
+                    m, m
+                )
+            }
+            ResolverError::NoObjectDefinedWithNameInModule(o, m) => {
+                write!(
+                    f,
+                    "No object called \"{}\" is defined in the module \"{}\".",
+                    o, m,
+                )
+            }
+            ResolverError::ModuleNotImported(m, c_m) => {
+                write!(
+                    f,
+                    "The module \"{}\" has not been imported into the module \"{}\".\nPlease import before using the associated module's types.",
+                    m,
+                    c_m
                 )
             }
         };
