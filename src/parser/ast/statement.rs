@@ -13,25 +13,62 @@ pub struct Field {
     pub name: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum StatementNode {
-    ExpressionStatement(Expression),
-    ReturnStatement(Token, Option<Expression>),
-    VariableDeclarationStatement(Token, Token, Expression), // symbol, name, initializer
-    BlockStatement(Token, Vec<Statement>),
-    WhileStatement(Token, Expression, Vec<Statement>),
-    ForStatement(
-        Token,
-        Token,
-        Expression,
-        Expression,
-        Expression,
-        Vec<Statement>,
-    ), // symbol, variable name, start, stop, step, body
-    IfStatement(Token, Expression, Vec<Statement>, Option<Vec<Statement>>),
-    FunctionStatement(Token, Token, Vec<Field>, Option<Type>, Vec<Statement>), // keyword, name, arguments, return type, body
-    StructStatement(Token, Token, HashMap<String, Field>), // keyword name, fields
-    PreProcessorCommandStatement(Token, PreProcessorCommand),
+ast_enum! {
+    pub
+    [Debug, Clone, PartialEq],
+    StatementNode {
+        ExpressionStatement {
+            expr: Expression
+        }
+        ReturnStatement {
+            keyword: Token,
+            value: Option<Expression>
+        }
+        VariableDeclarationStatement {
+            keyword: Token,
+            name: Token,
+            initializer: Expression
+        }
+        BlockStatement {
+            open_brace: Token,
+            body: Vec<Statement>
+        }
+        WhileStatement {
+            keyword: Token,
+            condition: Expression,
+            body: Vec<Statement>
+        }
+        ForStatement {
+            keyword: Token,
+            variable_name: Token,
+            start: Expression,
+            stop: Expression,
+            step: Expression,
+            body: Vec<Statement>
+        }
+        IfStatement {
+            keyword: Token,
+            condition: Expression,
+            body: Vec<Statement>,
+            else_body: Option<Vec<Statement>>
+        }
+        FunctionStatement {
+            keyword: Token,
+            name: Token,
+            arguments: Vec<Field>,
+            return_type: Option<Type>,
+            body: Vec<Statement>
+        }
+        StructStatement {
+            keyword: Token,
+            name: Token,
+            fields: HashMap<String, Field>
+        }
+        PreProcessorCommandStatement {
+            symbol: Token,
+            command: PreProcessorCommand
+        }
+    }
 }
 
 #[inline]
@@ -41,33 +78,9 @@ pub(crate) fn new_statement(node: StatementNode) -> Statement {
 
 impl StatementNode {
     #[inline]
-    pub fn is_function(&self) -> bool {
-        return match self {
-            StatementNode::FunctionStatement(_, _, _, _, _) => true,
-            _ => false,
-        };
-    }
-
-    #[inline]
-    pub fn is_struct(&self) -> bool {
-        return match self {
-            StatementNode::StructStatement(_, _, _) => true,
-            _ => false,
-        };
-    }
-
-    #[inline]
-    pub fn is_preprocessor(&self) -> bool {
-        return match self {
-            StatementNode::PreProcessorCommandStatement(_, _) => true,
-            _ => false,
-        };
-    }
-
-    #[inline]
     pub fn borrow_preprocessor_command(&self) -> &PreProcessorCommand {
         return match self {
-            StatementNode::PreProcessorCommandStatement(_, cmd) => cmd,
+            StatementNode::PreProcessorCommandStatement { symbol: _, command } => command,
             _ => panic!("Not a pre processor command statement"),
         };
     }
@@ -75,7 +88,13 @@ impl StatementNode {
     #[inline]
     pub fn borrow_function_name(&self) -> &Token {
         return match self {
-            StatementNode::FunctionStatement(_, name, _, _, _) => name,
+            StatementNode::FunctionStatement {
+                keyword: _,
+                name,
+                arguments: _,
+                return_type: _,
+                body: _,
+            } => name,
             _ => panic!("Not a function definition statement"),
         };
     }

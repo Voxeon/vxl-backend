@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::error::ResolverError;
-use crate::parser::ast::{Statement, Type};
+use crate::parser::ast::{Statement, StatementNode, Type};
 use crate::pre_processor::{CompilableModule, ObjectName};
 use crate::ROOT_MODULE_NAME;
 
@@ -234,7 +234,12 @@ impl Resolver {
         function_statement: &Statement,
         current_module: &str,
     ) -> ResolverResult<()> {
-        todo!();
+        // if let StatementNode::FunctionStatement(keyword, name, arguments, return_type, body) =
+        //     &*function_statement.borrow()
+        // {
+        // } else {
+        //     panic!();
+        // }
 
         return Ok(());
     }
