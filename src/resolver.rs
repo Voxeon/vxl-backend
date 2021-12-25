@@ -172,8 +172,8 @@ impl Resolver {
     ) -> ResolverResult<()> {
         // Check struct field types
         for (struct_name, struct_definition) in &module.structs {
-            for (_name, field) in &struct_definition.fields {
-                self.is_valid_type(&field.tp, Some(struct_name), &module.name, Some(imports))?;
+            for (_name, field_tp) in &struct_definition.fields {
+                self.is_valid_type(field_tp, Some(struct_name), &module.name, Some(imports))?;
             }
         }
 
@@ -234,15 +234,25 @@ impl Resolver {
         function_statement: &Statement,
         current_module: &str,
     ) -> ResolverResult<()> {
-        // if let StatementNode::FunctionStatement(keyword, name, arguments, return_type, body) =
-        //     &*function_statement.borrow()
-        // {
-        // } else {
-        //     panic!();
-        // }
+        if let StatementNode::FunctionStatement {
+            keyword: _,
+            name,
+            arguments,
+            return_type,
+            body,
+        } = &*function_statement.borrow()
+        {
+            // Check fields
+            // Check return type
+            // Check body
+        } else {
+            panic!();
+        }
 
         return Ok(());
     }
+
+    fn check_block() {}
 
     fn lookup_module(&self, name: &str) -> Option<&CompilableModule> {
         let mut m = self.processed_modules.get(name);

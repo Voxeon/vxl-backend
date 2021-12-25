@@ -1,5 +1,5 @@
 use super::PreProcessorCommand;
-use crate::ast::{Field, Statement, StatementNode, AST};
+use crate::ast::{Statement, StatementNode, Type, AST};
 use crate::error::PreProcessorError;
 use crate::lexer::token::Token;
 use crate::ROOT_MODULE_NAME;
@@ -17,7 +17,7 @@ pub struct ObjectName {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructDefinition {
     pub(crate) name: String,
-    pub(crate) fields: HashMap<String, Field>,
+    pub(crate) fields: HashMap<String, Type>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -272,7 +272,7 @@ mod tests {
         let main_function_stmt = new_statement(StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("main".to_string(), 0, 0, None),
-            Vec::new(),
+            HashMap::new(),
             None,
             Vec::new(),
         ));
@@ -402,7 +402,7 @@ mod tests {
         let main_function_stmt = new_statement(StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("main".to_string(), 0, 0, None),
-            Vec::new(),
+            HashMap::new(),
             None,
             Vec::new(),
         ));
@@ -456,7 +456,7 @@ mod tests {
         let main_function_stmt = new_statement(StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("main".to_string(), 0, 0, None),
-            Vec::new(),
+            HashMap::new(),
             None,
             Vec::new(),
         ));
@@ -486,7 +486,7 @@ mod tests {
         let second_function_stmt = new_statement(StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("second".to_string(), 0, 0, None),
-            Vec::new(),
+            HashMap::new(),
             None,
             Vec::new(),
         ));

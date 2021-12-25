@@ -111,7 +111,7 @@ impl Parser {
     fn parse_function_declaration(&mut self) -> ParserResult<Statement> {
         let keyword = self.consume_token_one([TokenType::FunctionToken])?;
         let name = self.consume_token_one([TokenType::IdentifierToken])?;
-        let mut args = Vec::new();
+        let mut args = HashMap::new();
         let mut return_type = None;
 
         if self.matches(TokenType::OpenRoundBraceToken) {
@@ -119,7 +119,8 @@ impl Parser {
 
             if !self.matches(TokenType::CloseRoundBraceToken) {
                 loop {
-                    args.push(self.parse_field()?);
+                    let (name, tp) = self.parse_field()?;
+                    args.insert(name, tp);
 
                     if !self.matches(TokenType::CommaToken) {
                         break;
@@ -160,10 +161,9 @@ impl Parser {
         let mut fields = HashMap::new();
 
         while !self.matches(TokenType::EndToken) {
-            let field = self.parse_field()?;
-            let field_name = field.name.clone();
+            let (field_name, field_tp) = self.parse_field()?;
 
-            if fields.insert(field_name.clone(), field).is_some() {
+            if fields.insert(field_name.clone(), field_tp).is_some() {
                 return Err(ParserError::FieldAlreadyDefinedForStruct(field_name, name));
             }
 
@@ -216,7 +216,7 @@ impl Parser {
         return Ok(tp);
     }
 
-    fn parse_field(&mut self) -> ParserResult<Field> {
+    fn parse_field(&mut self) -> ParserResult<(String, Type)> {
         let name = self.consume_token_one([TokenType::IdentifierToken])?;
 
         self.consume_token_one([TokenType::OpenRoundBraceToken])?;
@@ -224,10 +224,7 @@ impl Parser {
 
         self.consume_token_one([TokenType::CloseRoundBraceToken])?;
 
-        return Ok(Field {
-            tp,
-            name: name.lexeme().clone(),
-        });
+        return Ok((name.lexeme().clone(), tp));
     }
 
     fn parse_statement(&mut self) -> ParserResult<Statement> {
@@ -772,7 +769,7 @@ impl Parser {
 #[cfg(test)]
 mod tests {
     use super::{
-        new_expression, new_statement, ArrayLiteral, ExpressionNode, Field, Parser, ParserError,
+        new_expression, new_statement, ArrayLiteral, ExpressionNode, Parser, ParserError,
         PreProcessorCommand, StatementNode, Token, TokenType, Type, Value, Variable, AST,
     };
 
@@ -2133,7 +2130,7 @@ mod tests {
             let cmp = new_statement(StatementNode::function_statement(
                 tokens[0].clone(),
                 tokens[1].clone(),
-                Vec::new(),
+                HashMap::new(),
                 None,
                 Vec::new(),
             ));
@@ -2164,10 +2161,7 @@ mod tests {
             let cmp = new_statement(StatementNode::function_statement(
                 tokens[0].clone(),
                 tokens[1].clone(),
-                vec![Field {
-                    tp: Type::Integer,
-                    name: "a".to_string(),
-                }],
+                hashmap! [ "a".to_string() ; Type::Integer ],
                 None,
                 Vec::new(),
             ));
@@ -2240,37 +2234,16 @@ mod tests {
             let cmp = new_statement(StatementNode::function_statement(
                 tokens[0].clone(),
                 tokens[1].clone(),
-                vec![
-                    Field {
-                        tp: Type::Integer,
-                        name: "a".to_string(),
-                    },
-                    Field {
-                        tp: Type::Character,
-                        name: "b".to_string(),
-                    },
-                    Field {
-                        tp: Type::Boolean,
-                        name: "c".to_string(),
-                    },
-                    Field {
-                        tp: Type::Float,
-                        name: "d".to_string(),
-                    },
-                    Field {
-                        tp: Type::Array(Box::new(Type::Integer)),
-                        name: "e".to_string(),
-                    },
-                    Field {
-                        tp: Type::Array(Box::new(Type::Array(Box::new(Type::Integer)))),
-                        name: "f".to_string(),
-                    },
-                    Field {
-                        tp: Type::Array(Box::new(Type::Array(Box::new(Type::Array(Box::new(
-                            Type::Integer,
-                        )))))),
-                        name: "g".to_string(),
-                    },
+                hashmap![
+                    "a".to_string() ; Type::Integer,
+                    "b".to_string() ; Type::Character,
+                    "c".to_string() ; Type::Boolean,
+                    "d".to_string() ; Type::Float,
+                    "e".to_string() ; Type::Array(Box::new(Type::Integer)),
+                    "f".to_string() ; Type::Array(Box::new(Type::Array(Box::new(Type::Integer)))),
+                    "g".to_string() ; Type::Array(Box::new(Type::Array(Box::new(Type::Array(Box::new(
+                        Type::Integer,
+                    ))))))
                 ],
                 None,
                 Vec::new(),
@@ -2301,7 +2274,7 @@ mod tests {
             let cmp = new_statement(StatementNode::function_statement(
                 tokens[0].clone(),
                 tokens[1].clone(),
-                Vec::new(),
+                HashMap::new(),
                 Some(Type::Integer),
                 vec![new_statement(StatementNode::return_statement(
                     tokens[5].clone(),
@@ -2340,10 +2313,7 @@ mod tests {
             let cmp = new_statement(StatementNode::function_statement(
                 tokens[0].clone(),
                 tokens[1].clone(),
-                vec![Field {
-                    tp: Type::Integer,
-                    name: "a".to_string(),
-                }],
+                hashmap!["a".to_string() ; Type::Integer],
                 Some(Type::Integer),
                 Vec::new(),
             ));
@@ -2370,7 +2340,7 @@ mod tests {
             let cmp = new_statement(StatementNode::function_statement(
                 tokens[0].clone(),
                 tokens[1].clone(),
-                Vec::new(),
+                HashMap::new(),
                 None,
                 vec![new_statement(StatementNode::return_statement(
                     tokens[3].clone(),
@@ -2411,10 +2381,7 @@ mod tests {
             let cmp = new_statement(StatementNode::function_statement(
                 tokens[0].clone(),
                 tokens[1].clone(),
-                vec![Field {
-                    tp: Type::Integer,
-                    name: "a".to_string(),
-                }],
+                hashmap!["a".to_string() ; Type::Integer],
                 Some(Type::Integer),
                 vec![new_statement(StatementNode::expression_statement(
                     new_expression(ExpressionNode::binary_expression(
@@ -2477,10 +2444,7 @@ mod tests {
             let cmp = new_statement(StatementNode::struct_statement(
                 tokens[0].clone(),
                 tokens[1].clone(),
-                hashmap!["field_a".to_string() ; Field {
-                    tp: Type::Integer,
-                    name: "field_a".to_string(),
-                }],
+                hashmap!["field_a".to_string() ; Type::Integer],
             ));
             let mut parser = new_default_parser(tokens);
 
@@ -2524,22 +2488,10 @@ mod tests {
                 tokens[0].clone(),
                 tokens[1].clone(),
                 hashmap![
-                    "field_a".to_string() ; Field {
-                        tp: Type::Integer,
-                        name: "field_a".to_string(),
-                    },
-                    "field_b".to_string() ; Field {
-                        tp: Type::Boolean,
-                        name: "field_b".to_string(),
-                    },
-                    "field_c".to_string() ; Field {
-                        tp: Type::Character,
-                        name: "field_c".to_string(),
-                    },
-                    "field_d".to_string() ; Field {
-                        tp: Type::Float,
-                        name: "field_d".to_string(),
-                    }
+                    "field_a".to_string() ; Type::Integer,
+                    "field_b".to_string() ; Type::Boolean,
+                    "field_c".to_string() ; Type::Character,
+                    "field_d".to_string() ; Type::Float
                 ],
             ));
             let mut parser = new_default_parser(tokens);
@@ -2577,14 +2529,8 @@ mod tests {
                 tokens[0].clone(),
                 tokens[1].clone(),
                 hashmap![
-                    "field_a".to_string() ; Field {
-                        tp: Type::Integer,
-                        name: "field_a".to_string(),
-                    },
-                    "field_b".to_string() ; Field {
-                        tp: Type::Struct {name: "string".to_string(), module: "std".to_string() },
-                        name: "field_b".to_string(),
-                    }
+                    "field_a".to_string() ; Type::Integer,
+                    "field_b".to_string() ; Type::Struct {name: "string".to_string(), module: "std".to_string() }
                 ],
             ));
             let mut parser = new_default_parser(tokens);
@@ -2782,7 +2728,7 @@ mod tests {
             cmp.push_statement(new_statement(StatementNode::function_statement(
                 tokens[11].clone(),
                 tokens[12].clone(),
-                Vec::new(),
+                HashMap::new(),
                 Some(Type::Integer),
                 vec![
                     new_statement(StatementNode::variable_declaration_statement(
@@ -2860,7 +2806,7 @@ mod tests {
             cmp.push_statement(new_statement(StatementNode::function_statement(
                 tokens[11].clone(),
                 tokens[12].clone(),
-                Vec::new(),
+                HashMap::new(),
                 Some(Type::Integer),
                 vec![
                     new_statement(StatementNode::variable_declaration_statement(

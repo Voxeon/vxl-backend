@@ -7,12 +7,6 @@ use std::rc::Rc;
 
 pub type Statement = Rc<RefCell<StatementNode>>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Field {
-    pub tp: Type,
-    pub name: String,
-}
-
 ast_enum! {
     pub
     [Debug, Clone, PartialEq],
@@ -55,14 +49,14 @@ ast_enum! {
         FunctionStatement {
             keyword: Token,
             name: Token,
-            arguments: Vec<Field>,
+            arguments: HashMap<String, Type>,
             return_type: Option<Type>,
             body: Vec<Statement>
         }
         StructStatement {
             keyword: Token,
             name: Token,
-            fields: HashMap<String, Field>
+            fields: HashMap<String, Type>
         }
         PreProcessorCommandStatement {
             symbol: Token,
