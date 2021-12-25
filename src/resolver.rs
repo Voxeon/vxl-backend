@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::ast::{Statement, StatementNode, Type};
 use crate::error::ResolverError;
-use crate::parser::ast::{Statement, StatementNode, Type};
 use crate::pre_processor::{CompilableModule, ObjectName};
 use crate::ROOT_MODULE_NAME;
 

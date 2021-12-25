@@ -1,7 +1,7 @@
 use super::PreProcessorCommand;
+use crate::ast::{Field, Statement, StatementNode, AST};
 use crate::error::PreProcessorError;
 use crate::lexer::token::Token;
-use crate::parser::ast::{Field, Statement, StatementNode, AST};
 use crate::ROOT_MODULE_NAME;
 
 use std::collections::{HashMap, VecDeque};
@@ -243,8 +243,8 @@ impl PreProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::{new_statement, StatementNode};
     use crate::lexer::token::Token;
-    use crate::parser::ast::{new_statement, StatementNode};
 
     macro_rules! hashmap {
         [$($k:expr ; $v:expr),*] => {

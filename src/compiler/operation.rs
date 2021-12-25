@@ -1,5 +1,5 @@
+use crate::ast::Value;
 use crate::compiler::context::Context;
-use crate::parser::ast::Value;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Operation {

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::ast::*;
+use crate::ast::*;
 use crate::error::ParserError;
 use crate::lexer::token::{Token, TokenType};
 use crate::pre_processor::PreProcessorCommand;

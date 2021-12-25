@@ -2,7 +2,7 @@
 
 use super::operation::Operation;
 use super::Backend;
-use crate::parser::ast::StatementNode;
+use crate::ast::StatementNode;
 use crate::pre_processor::CompilableModule;
 
 use std::collections::HashMap;
