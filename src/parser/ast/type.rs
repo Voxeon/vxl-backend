@@ -4,7 +4,7 @@ pub enum Type {
     Integer,
     Float,
     Character,
-    Struct(String, String), // name, module
+    Struct { name: String, module: String },
     Array(Box<Type>),
 }
 
@@ -30,7 +30,16 @@ impl Type {
             (Type::Boolean, Type::Boolean) => {
                 return true;
             }
-            (Type::Struct(self_val, self_module), Type::Struct(other_val, other_module)) => {
+            (
+                Type::Struct {
+                    name: self_val,
+                    module: self_module,
+                },
+                Type::Struct {
+                    name: other_val,
+                    module: other_module,
+                },
+            ) => {
                 return self_val == other_val && self_module == other_module;
             }
             (Type::Array(self_val), Type::Array(other_val)) => {
@@ -48,8 +57,8 @@ impl TypeSize for Type {
             Type::Integer => 8,
             Type::Float => 8,
             Type::Character => 4,
-            Type::Struct(_, _) => POINTER_SIZE,
-            Type::Array(_) => POINTER_SIZE,
+            Type::Struct { .. } => POINTER_SIZE,
+            Type::Array(..) => POINTER_SIZE,
         };
     }
 }

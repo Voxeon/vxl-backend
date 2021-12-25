@@ -206,7 +206,10 @@ impl Parser {
                 // >
                 self.consume_token_one([TokenType::GreaterThanToken])?;
 
-                Type::Struct(name.lexeme().clone(), module.lexeme().clone())
+                Type::Struct {
+                    name: name.lexeme().clone(),
+                    module: module.lexeme().clone(),
+                }
             }
         };
 
@@ -2579,7 +2582,7 @@ mod tests {
                         name: "field_a".to_string(),
                     },
                     "field_b".to_string() ; Field {
-                        tp: Type::Struct("string".to_string(), "std".to_string()),
+                        tp: Type::Struct {name: "string".to_string(), module: "std".to_string() },
                         name: "field_b".to_string(),
                     }
                 ],

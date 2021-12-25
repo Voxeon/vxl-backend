@@ -193,7 +193,7 @@ impl Resolver {
     ) -> ResolverResult<()> {
         if let Type::Array(nested) = tp {
             return self.is_valid_type(nested, current_struct, current_module, imports);
-        } else if let Type::Struct(name, module) = tp {
+        } else if let Type::Struct { name, module } = tp {
             let found_module = {
                 if let Some(imports) = imports {
                     imports.contains(module) || module == current_module

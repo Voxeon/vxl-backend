@@ -29,7 +29,7 @@ macro_rules! ast_enum {
                     #[allow(dead_code)]
                     pub fn [<is_ $variant:snake:lower>](&self) -> bool {
                         return match self {
-                            Self::$variant { $($field_name :_),* } => true,
+                            Self::$variant { .. } => true,
                             _ => false,
                         };
                     }
