@@ -1,6 +1,3 @@
-#[macro_use]
-mod macros;
-
 mod ast;
 mod expression;
 mod statement;

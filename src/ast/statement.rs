@@ -7,9 +7,9 @@ use std::rc::Rc;
 
 pub type Statement = Rc<RefCell<StatementNode>>;
 
-ast_enum! {
+struct_enum_with_functional_inits! {
     pub
-    [Debug, Clone, PartialEq],
+    [Debug, Clone, PartialEq]
     StatementNode {
         ExpressionStatement {
             expr: Expression

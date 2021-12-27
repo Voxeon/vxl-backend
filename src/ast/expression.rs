@@ -6,9 +6,9 @@ use std::rc::Rc;
 
 pub type Expression = Rc<RefCell<ExpressionNode>>;
 
-ast_enum! {
+struct_enum_with_functional_inits! {
     pub
-    [Debug, Clone, PartialEq],
+    [Debug, Clone, PartialEq]
     ExpressionNode {
         ArrayAllocationExpression {
             array_type : ArrayLiteral,
