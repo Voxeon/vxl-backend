@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::{Statement, StatementNode, Type};
 use crate::error::ResolverError;
+use crate::lexer::token::Token;
 use crate::pre_processor::{CompilableModule, ObjectName};
 use crate::ROOT_MODULE_NAME;
 
@@ -177,8 +178,26 @@ impl Resolver {
             }
         }
 
-        for (name, function_statement) in &module.functions {
-            self.check_function(name, function_statement, &module.name)?;
+        for (f_name, function_statement) in &module.functions {
+            if let StatementNode::FunctionStatement {
+                keyword: _,
+                name,
+                arguments,
+                return_type,
+                body,
+            } = &*function_statement.borrow()
+            {
+                self.check_function(
+                    name,
+                    arguments,
+                    return_type,
+                    body,
+                    &module.name,
+                    Some(imports),
+                )?;
+            } else {
+                panic!("Internal Error: Unexpected statement in the \"{}\" module. Function name: \"{}\"", module.name, f_name);
+            }
         }
 
         return Ok(());
@@ -187,12 +206,23 @@ impl Resolver {
     fn is_valid_type(
         &self,
         tp: &Type,
+        reference_token: Option<&Token>,
+        current_function: Option<&Token>,
+        custom_message: Option<&String>,
         current_struct: Option<&String>,
         current_module: &str,
         imports: Option<&HashSet<String>>,
     ) -> ResolverResult<()> {
         if let Type::Array(nested) = tp {
-            return self.is_valid_type(nested, current_struct, current_module, imports);
+            return self.is_valid_type(
+                nested,
+                reference_token,
+                current_function,
+                custom_message,
+                current_struct,
+                current_module,
+                imports,
+            );
         } else if let Type::Struct { name, module } = tp {
             let found_module = {
                 if let Some(imports) = imports {
@@ -209,9 +239,24 @@ impl Resolver {
                     return Ok(());
                 } else {
                     if let Some(s) = current_struct {
-                        return Err(ResolverError::NoModuleDefinedWithNameInStruct(
+                        return Err(ResolverError::NoObjectDefinedWithNameInModuleInStruct(
+                            name.clone(),
                             module.clone(),
                             s.clone(),
+                        ));
+                    } else if reference_token.is_some() || current_function.is_some() {
+                        let ref_token;
+
+                        if let Some(reference_token) = reference_token {
+                            ref_token = reference_token;
+                        } else {
+                            ref_token = current_function.unwrap();
+                        }
+
+                        return Err(ResolverError::NoObjectDefinedWithNameInModuleInFunction(
+                            name.clone(),
+                            module.clone(),
+                            ref_token.clone(),
                         ));
                     } else {
                         return Err(ResolverError::NoModuleDefinedWithName(module.clone()));
@@ -230,23 +275,15 @@ impl Resolver {
 
     fn check_function(
         &self,
-        function_name: &str,
-        function_statement: &Statement,
+        function_name: &Token,
+        function_arguments: &HashMap<String, Type>,
+        return_type: &Option<Type>,
+        body: &Vec<Statement>,
         current_module: &str,
+        imports: Option<&HashSet<String>>,
     ) -> ResolverResult<()> {
-        if let StatementNode::FunctionStatement {
-            keyword: _,
-            name,
-            arguments,
-            return_type,
-            body,
-        } = &*function_statement.borrow()
-        {
-            // Check fields
-            // Check return type
-            // Check body
-        } else {
-            panic!();
+        if let Some(return_type) = return_type {
+            self.is_valid_type(return_type, None, current_module, imports)?;
         }
 
         return Ok(());
