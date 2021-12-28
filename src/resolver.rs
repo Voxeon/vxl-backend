@@ -108,7 +108,7 @@ impl Resolver {
             {
                 required_modules.insert(import.name.lexeme().clone());
             } else {
-                missing_modules_errors.push(ResolverError::NoObjectDefined(
+                missing_modules_errors.push(ResolverError::no_object_defined(
                     import.name.clone(),
                     import.module.clone(),
                 ));
@@ -137,7 +137,8 @@ impl Resolver {
                     referenced_module,
                 );
             } else {
-                missing_modules_errors.push(ResolverError::NoModuleDefined(import.module.clone()));
+                missing_modules_errors
+                    .push(ResolverError::no_module_defined(import.module.clone()));
             }
         }
 
@@ -239,11 +240,13 @@ impl Resolver {
                     return Ok(());
                 } else {
                     if let Some(s) = current_struct {
-                        return Err(ResolverError::NoObjectDefinedWithNameInModuleInStruct(
-                            name.clone(),
-                            module.clone(),
-                            s.clone(),
-                        ));
+                        return Err(
+                            ResolverError::no_object_defined_with_name_in_module_in_struct(
+                                name.clone(),
+                                module.clone(),
+                                s.clone(),
+                            ),
+                        );
                     } else if reference_token.is_some() || current_function.is_some() {
                         let ref_token;
 
@@ -253,17 +256,19 @@ impl Resolver {
                             ref_token = current_function.unwrap();
                         }
 
-                        return Err(ResolverError::NoObjectDefinedWithNameInModuleInFunction(
-                            name.clone(),
-                            module.clone(),
-                            ref_token.clone(),
-                        ));
+                        return Err(
+                            ResolverError::no_object_defined_with_name_in_module_in_function(
+                                name.clone(),
+                                module.clone(),
+                                ref_token.clone(),
+                            ),
+                        );
                     } else {
-                        return Err(ResolverError::NoModuleDefinedWithName(module.clone()));
+                        return Err(ResolverError::no_module_defined_with_name(module.clone()));
                     }
                 }
             } else {
-                return Err(ResolverError::ModuleNotImported(
+                return Err(ResolverError::module_not_imported(
                     module.clone(),
                     current_module.to_string(),
                 ));

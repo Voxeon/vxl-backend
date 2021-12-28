@@ -113,7 +113,7 @@ struct_enum_with_functional_inits! {
             module: Token
         }
         NoModuleDefinedWithName {
-            module: Token
+            module: String
         }
         NoObjectDefinedWithNameInModule {
             object: String,
@@ -131,7 +131,7 @@ struct_enum_with_functional_inits! {
         NoObjectDefinedWithNameInModuleInFunction {
             object: String,
             module: String,
-            function: String
+            function: Token
         }
         NoObjectDefined {
             object: Token,
