@@ -1,5 +1,6 @@
 use crate::lexer::token::Token;
 use crate::ROOT_MODULE_NAME;
+
 use std::error::Error as ErrorTrait;
 use std::fmt;
 
@@ -9,54 +10,141 @@ pub enum VoxlError<BE: ErrorTrait> {
     CustomError(String),
     LexerError(LexerError),
     BuilderError(BE),
+    ParserError(ParserError),
+    PreProcessorError(PreProcessorError),
+    ResolverError(ResolverError),
     AssemblerError(String),
     AssemblerExecutionError(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum LexerError {
-    Expected(String, String, usize, usize, Option<String>),
-    UnexpectedCharacter(char, usize, usize, Option<String>),
-    UnexpectedCharacterExpected(char, String, usize, usize, Option<String>),
-    UnterminatedString(usize, usize, Option<String>),
-    UnterminatedCharacterLiteral(usize, usize, Option<String>),
-    EmptyCharacterLiteral(usize, usize, Option<String>),
-    InvalidUnicodeEscapeSequence(String, usize, usize, Option<String>),
-    InvalidUnicodeEscapeSequenceLength(usize, usize, Option<String>),
+pub struct LexerError {
+    tp: LexerErrorType,
+    row: usize,
+    column: usize,
+    file: Option<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum ParserError {
-    UnexpectedToken(Token),
-    ExpectedFoundEOF(String),
-    ExpectedFound(String, String),
-    InvalidIntegerLiteral(Token),
-    InvalidDoubleLiteral(Token),
-    TooManyFunctionArguments(Token),
-    InvalidAssignmentTarget(Token),
-    UnterminatedBlock(Token),
-    InvalidPreProcessorCommand(Token),
-    FieldAlreadyDefinedForStruct(String, Token),
+struct_enum_with_functional_inits! {
+    pub
+    [Clone, Debug, PartialEq, Eq, Hash]
+    LexerErrorType {
+        Expected {
+            expected_string: String,
+            after_string: String
+        }
+        UnexpectedCharacter {
+            character: char
+        }
+        UnexpectedCharacterExpected {
+            unexpected_character: char,
+            expected_string: String
+        }
+        UnterminatedString
+        UnterminatedCharacterLiteral
+        EmptyCharacterLiteral
+        InvalidUnicodeEscapeSequence {
+            sequence: String
+        }
+        InvalidUnicodeEscapeSequenceLength
+    }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum PreProcessorError {
-    NoRootModuleDefined,
-    ModuleAlreadyDefined(Token, Token),
-    NoCurrentModuleDefined(Token),
+struct_enum_with_functional_inits! {
+    pub
+    [Clone, Debug, PartialEq, Eq, Hash]
+    ParserError {
+        UnexpectedToken {
+            token: Token
+        }
+        ExpectedFoundEOF {
+            expected: String
+        }
+        ExpectedFound {
+            expected: String,
+            found: String
+        }
+        InvalidIntegerLiteral {
+            literal: Token
+        }
+        InvalidDoubleLiteral {
+            literal: Token
+        }
+        TooManyFunctionArguments {
+            reference_token: Token
+        }
+        InvalidAssignmentTarget {
+            reference_token: Token
+        }
+        UnterminatedBlock {
+            reference_token: Token
+        }
+        InvalidPreProcessorCommand {
+            command: Token
+        }
+        FieldAlreadyDefinedForStruct {
+            field_name: String,
+            struct_name: Token
+        }
+    }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum ResolverError {
-    NoRootModuleDefined,
-    NoModuleDefined(Token),
-    NoModuleDefinedWithName(String),                 // Module
-    NoObjectDefinedWithNameInModule(String, String), // object, module
-    NoModuleDefinedWithNameInStruct(String, String), // Module, struct
-    NoObjectDefinedWithNameInModuleInStruct(String, String, String), // object, module, struct
-    NoObjectDefined(Token, Token),
-    ModuleNotImported(String, String), // import module, current module
-    Multiple(Vec<ResolverError>),
+struct_enum_with_functional_inits! {
+    pub
+    [Clone, Debug, PartialEq, Eq, Hash]
+    PreProcessorError {
+        NoRootModuleDefined
+        ModuleAlreadyDefined {
+            new_module: Token,
+            original_module: Token
+        }
+        NoCurrentModuleDefined {
+            reference_token: Token
+        }
+    }
+}
+
+struct_enum_with_functional_inits! {
+    pub
+    [Clone, Debug, PartialEq, Eq, Hash]
+    ResolverError {
+        NoRootModuleDefined
+        NoModuleDefined {
+            module: Token
+        }
+        NoModuleDefinedWithName {
+            module: Token
+        }
+        NoObjectDefinedWithNameInModule {
+            object: String,
+            module: String
+        }
+        NoModuleDefinedWithNameInStruct {
+            module: String,
+            associated_struct: String
+        }
+        NoObjectDefinedWithNameInModuleInStruct {
+            object: String,
+            module: String,
+            associated_struct: String
+        }
+        NoObjectDefinedWithNameInModuleInFunction {
+            object: String,
+            module: String,
+            function: String
+        }
+        NoObjectDefined {
+            object: Token,
+            module: Token
+        }
+        ModuleNotImported {
+            import_module: String,
+            current_module: String
+        }
+        Multiple {
+            errors: Vec<ResolverError>
+        }
+    }
 }
 
 impl<BE: ErrorTrait> VoxlError<BE> {
@@ -76,89 +164,66 @@ impl<BE: ErrorTrait> fmt::Display for VoxlError<BE> {
                 write!(f, "Assembler execution error: {}", description)
             }
             VoxlError::LexerError(le) => write!(f, "{}", le),
+            VoxlError::ParserError(err) => write!(f, "Parser error: {}", err),
+            VoxlError::PreProcessorError(err) => write!(f, "Pre-Processor error: {}", err),
+            VoxlError::ResolverError(err) => write!(f, "Resolver error: {}", err),
         };
     }
 }
 
 impl<BE: ErrorTrait> ErrorTrait for VoxlError<BE> {}
 
-impl LexerError {}
+impl fmt::Display for LexerErrorType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        return match self {
+            LexerErrorType::UnexpectedCharacter { character } => {
+                write!(f, "Unexpected character '{}'", character)
+            }
+            LexerErrorType::UnexpectedCharacterExpected {
+                unexpected_character,
+                expected_string,
+            } => write!(
+                f,
+                "Unexpected character '{}', expected '{}'",
+                unexpected_character, expected_string
+            ),
+            LexerErrorType::UnterminatedString => {
+                write!(f, "Unterminated string")
+            }
+            LexerErrorType::UnterminatedCharacterLiteral => {
+                write!(f, "Unterminated character literal",)
+            }
+            LexerErrorType::EmptyCharacterLiteral => write!(f, "Empty character literal"),
+            LexerErrorType::InvalidUnicodeEscapeSequence { sequence } => {
+                write!(f, "Invalid unicode escape sequence '\\u{{{}}}'", sequence)
+            }
+            LexerErrorType::InvalidUnicodeEscapeSequenceLength => {
+                write!(f, "Invalid unicode sequence. Must contain 8 hex characters")
+            }
+            LexerErrorType::Expected {
+                expected_string,
+                after_string,
+            } => write!(f, "Expected '{}' after '{}'", expected_string, after_string),
+        };
+    }
+}
+
+impl LexerError {
+    pub fn new(tp: LexerErrorType, row: usize, column: usize, file: Option<String>) -> Self {
+        return Self {
+            tp,
+            row,
+            column,
+            file,
+        };
+    }
+}
 
 impl fmt::Display for LexerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        return match self {
-            LexerError::UnexpectedCharacter(ch, line, col, file) => match file {
-                Some(file) => write!(
-                    f,
-                    "Unexpected character '{}'\n{} ({}, {})",
-                    ch, file, line, col
-                ),
-                None => write!(f, "Unexpected character '{}'({}, {})", ch, line, col),
-            },
-            LexerError::UnexpectedCharacterExpected(ch, expected, line, col, file) => match file {
-                Some(file) => write!(
-                    f,
-                    "Unexpected character '{}', expected '{}'.\n{} ({}, {})",
-                    ch, expected, file, line, col
-                ),
-                None => write!(
-                    f,
-                    "Unexpected character '{}', expected '{}' ({}, {})",
-                    ch, expected, line, col
-                ),
-            },
-            LexerError::UnterminatedString(line, col, file) => match file {
-                Some(file) => write!(f, "Unterminated string \n{} ({}, {})", file, line, col),
-                None => write!(f, "Unterminated string ({}, {})", line, col),
-            },
-            LexerError::UnterminatedCharacterLiteral(line, col, file) => match file {
-                Some(file) => write!(
-                    f,
-                    "Unterminated character literal \n{} ({}, {})",
-                    file, line, col
-                ),
-                None => write!(f, "Unterminated character literal ({}, {})", line, col),
-            },
-            LexerError::EmptyCharacterLiteral(line, col, file) => match file {
-                Some(file) => write!(f, "Empty character literal \n{} ({}, {})", file, line, col),
-                None => write!(f, "Empty character literal ({}, {})", line, col),
-            },
-            LexerError::InvalidUnicodeEscapeSequence(text, line, col, file) => match file {
-                Some(file) => write!(
-                    f,
-                    "Invalid unicode sequence '\\u{{{}}}'\n{} ({}, {})",
-                    text, file, line, col
-                ),
-                None => write!(
-                    f,
-                    "Invalid unicode sequence '\\u{{{}}}' ({}, {})",
-                    text, line, col
-                ),
-            },
-            LexerError::InvalidUnicodeEscapeSequenceLength(line, col, file) => match file {
-                Some(file) => write!(
-                    f,
-                    "Invalid unicode sequence. Must contain 8 hex characters.\n{} ({}, {})",
-                    file, line, col
-                ),
-                None => write!(
-                    f,
-                    "Invalid unicode sequence. Must contain 8 hex characters. ({}, {})",
-                    line, col
-                ),
-            },
-            LexerError::Expected(expected, after, line, col, file) => match file {
-                Some(file) => write!(
-                    f,
-                    "Expected \"{}\" after \"{}\".\n{} ({}, {})",
-                    expected, after, file, line, col
-                ),
-                None => write!(
-                    f,
-                    "Expected \"{}\" after \"{}\".({}, {})",
-                    expected, after, line, col
-                ),
-            },
+        return match &self.file {
+            Some(file) => write!(f, "{}\n{} ({}, {})", &self.tp, file, self.row, self.column),
+            None => write!(f, "{}({}, {})", &self.tp, self.row, self.column),
         };
     }
 }
@@ -170,36 +235,49 @@ impl ErrorTrait for ParserError {}
 impl fmt::Display for ParserError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         return match self {
-            ParserError::UnexpectedToken(tok) => write!(f, "Unexpected token {}", tok),
-            ParserError::ExpectedFoundEOF(tp) => {
-                write!(f, "Expected {} instead found the end of the file.", tp)
+            ParserError::UnexpectedToken { token } => {
+                write!(f, "Unexpected token {}", token)
             }
-            ParserError::ExpectedFound(tp, found) => {
-                write!(f, "Expected {} instead found \"{}\".", tp, found)
+            ParserError::ExpectedFoundEOF { expected } => {
+                write!(
+                    f,
+                    "Expected {} instead found the end of the file.",
+                    expected
+                )
             }
-            ParserError::InvalidIntegerLiteral(tok) => {
-                write!(f, "Invalid integer literal {}", tok)
+            ParserError::ExpectedFound { expected, found } => {
+                write!(f, "Expected {} instead found \"{}\".", expected, found)
             }
-            ParserError::InvalidDoubleLiteral(tok) => {
-                write!(f, "Invalid double literal {}", tok)
+            ParserError::InvalidIntegerLiteral { literal } => {
+                write!(f, "Invalid integer literal {}", literal)
             }
-            ParserError::TooManyFunctionArguments(tok) => {
-                write!(f, "Too many function arguments (Max 255) {}", tok)
+            ParserError::InvalidDoubleLiteral { literal } => {
+                write!(f, "Invalid double literal {}", literal)
             }
-            ParserError::InvalidAssignmentTarget(tok) => {
-                write!(f, "Invalid assignment target. {}", tok)
+            ParserError::TooManyFunctionArguments { reference_token } => {
+                write!(
+                    f,
+                    "Too many function arguments (Max 255) {}",
+                    reference_token
+                )
             }
-            ParserError::UnterminatedBlock(tok) => {
+            ParserError::InvalidAssignmentTarget { reference_token } => {
+                write!(f, "Invalid assignment target. {}", reference_token)
+            }
+            ParserError::UnterminatedBlock { reference_token } => {
                 write!(
                     f,
                     "Unterminated block. Ensure that each block ends with an 'end' keyword. {}",
-                    tok
+                    reference_token
                 )
             }
-            ParserError::InvalidPreProcessorCommand(tok) => {
-                write!(f, "Invalid pre-processor command. {}", tok)
+            ParserError::InvalidPreProcessorCommand { command } => {
+                write!(f, "Invalid pre-processor command. {}", command)
             }
-            ParserError::FieldAlreadyDefinedForStruct(field_name, struct_name) => {
+            ParserError::FieldAlreadyDefinedForStruct {
+                field_name,
+                struct_name,
+            } => {
                 write!(
                     f,
                     "The field with the name: \'{}\', has already been defined for this struct. {}",
@@ -222,14 +300,21 @@ impl fmt::Display for PreProcessorError {
                     ROOT_MODULE_NAME, ROOT_MODULE_NAME
                 )
             }
-            PreProcessorError::ModuleAlreadyDefined(new, original) => {
-                write!(f, "Module \"{}\" already defined here {}.", new, original)
+            PreProcessorError::ModuleAlreadyDefined {
+                new_module,
+                original_module,
+            } => {
+                write!(
+                    f,
+                    "Module \"{}\" already defined here {}.",
+                    new_module, original_module
+                )
             }
-            PreProcessorError::NoCurrentModuleDefined(tok) => {
+            PreProcessorError::NoCurrentModuleDefined { reference_token } => {
                 write!(
                     f,
                     "No \"{}\" module defined.\nStart a new module with `%begin`. {}",
-                    ROOT_MODULE_NAME, tok
+                    ROOT_MODULE_NAME, reference_token
                 )
             }
         };
@@ -248,71 +333,83 @@ impl fmt::Display for ResolverError {
                     ROOT_MODULE_NAME, ROOT_MODULE_NAME
                 )
             }
-            ResolverError::Multiple(errs) => {
+            ResolverError::Multiple { errors } => {
                 write!(
                     f,
                     "{}",
-                    errs.iter()
+                    errors
+                        .iter()
                         .map(|e| [e.to_string(), String::from("\n")].join(""))
                         .collect::<String>()
                 )
             }
-            ResolverError::NoModuleDefined(m) => {
+            ResolverError::NoModuleDefined { module } => {
                 write!(
                     f,
                     "No \"{}\" module defined.\nStart a module with `%begin {}`",
-                    m.lexeme(),
-                    m.lexeme()
+                    module.lexeme(),
+                    module.lexeme()
                 )
             }
-            ResolverError::NoObjectDefined(o, m) => {
+            ResolverError::NoObjectDefined { object, module } => {
                 write!(
                     f,
                     "No object called \"{}\" is defined in the module \"{}\".",
-                    o.lexeme(),
-                    m.lexeme()
+                    object.lexeme(),
+                    module.lexeme()
                 )
             }
-            ResolverError::NoModuleDefinedWithNameInStruct(m, s) => {
+            ResolverError::NoModuleDefinedWithNameInStruct {
+                module,
+                associated_struct,
+            } => {
                 write!(
                     f,
                     "No \"{}\" module defined. Referenced in the definition of the struct \"{}\".\nStart a module with `%begin {}`",
-                    m,
-                    s,
-                    m
+                    module,
+                    associated_struct,
+                    module
                 )
             }
-            ResolverError::NoObjectDefinedWithNameInModuleInStruct(o, m, s) => {
+            ResolverError::NoObjectDefinedWithNameInModuleInStruct {
+                object,
+                module,
+                associated_struct,
+            } => {
                 write!(
                     f,
                     "No object called \"{}\" is defined in the module \"{}\".\nReferenced in the definition of the struct \"{}\".",
-                    o,
-                    m,
-                    s
+                    object,
+                    module,
+                    associated_struct
                 )
             }
-            ResolverError::NoModuleDefinedWithName(m) => {
+            ResolverError::NoModuleDefinedWithName { module } => {
                 write!(
                     f,
                     "No \"{}\" module defined.\nStart a module with `%begin {}`",
-                    m, m
+                    module, module
                 )
             }
-            ResolverError::NoObjectDefinedWithNameInModule(o, m) => {
+            ResolverError::NoObjectDefinedWithNameInModule { object, module } => {
                 write!(
                     f,
                     "No object called \"{}\" is defined in the module \"{}\".",
-                    o, m,
+                    object, module,
                 )
             }
-            ResolverError::ModuleNotImported(m, c_m) => {
+            ResolverError::ModuleNotImported {
+                import_module,
+                current_module,
+            } => {
                 write!(
                     f,
                     "The module \"{}\" has not been imported into the module \"{}\".\nPlease import before using the associated module's types.",
-                    m,
-                    c_m
+                    import_module,
+                    current_module
                 )
             }
+            ResolverError::NoObjectDefinedWithNameInModuleInFunction { .. } => todo!(),
         };
     }
 }

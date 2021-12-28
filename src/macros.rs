@@ -1,7 +1,5 @@
 macro_rules! struct_enum_with_functional_inits {
     {$visibility:vis $([$($derive:ident),*])?  $name:ident { $($variant:ident $({ $($field_name:ident : $field_type:ty),* })?)* } } => {
-        use paste::paste;
-
         $(#[derive($($derive),*)])?
 
         $visibility enum $name {
@@ -15,7 +13,7 @@ macro_rules! struct_enum_with_functional_inits {
         }
 
         impl $name {
-            paste! {
+            paste::paste! {
                 $(
                     #[allow(dead_code)]
                     pub fn [<$variant:snake:lower>]($($($field_name : $field_type),*)?) -> Self {
