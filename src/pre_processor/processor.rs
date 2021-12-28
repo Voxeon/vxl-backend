@@ -113,12 +113,9 @@ impl PreProcessor {
     }
 
     pub fn get_current_module_name(&self, reference_token: &Token) -> PreProcessorResult<&Token> {
-        return self
-            .current_module_name
-            .as_ref()
-            .ok_or(PreProcessorError::NoCurrentModuleDefined(
-                reference_token.clone(),
-            ));
+        return self.current_module_name.as_ref().ok_or(
+            PreProcessorError::no_current_module_defined(reference_token.clone()),
+        );
     }
 
     fn process_root_statement(&mut self, stmt: Statement) -> PreProcessorResult<()> {
@@ -140,7 +137,7 @@ impl PreProcessor {
         match command {
             PreProcessorCommand::BeginModuleCommand(module_name) => {
                 if self.modules.contains(&module_name) {
-                    return Err(PreProcessorError::ModuleAlreadyDefined(
+                    return Err(PreProcessorError::module_already_defined(
                         module_name.clone(),
                         self.current_module_name.as_ref().unwrap().clone(),
                     ));
