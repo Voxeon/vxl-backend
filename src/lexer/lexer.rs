@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use super::token::*;
-use crate::error::LexerError;
+use crate::error::{LexerError, LexerErrorType};
 
 #[derive(Debug)]
 pub struct Lexer {
@@ -90,9 +90,8 @@ impl Lexer {
                         self.add_token::<2>(TokenType::BangEqualsToken);
                     }
                     Some(_) | None => {
-                        return Err(LexerError::Expected(
-                            "=".to_string(),
-                            "!".to_string(),
+                        return Err(LexerError::new(
+                            LexerErrorType::expected("=".to_string(), "!".to_string()),
                             self.line,
                             self.column,
                             self.file,
@@ -111,8 +110,8 @@ impl Lexer {
                     } else if character.is_whitespace() {
                         self.increment_col::<1>();
                     } else {
-                        return Err(LexerError::UnexpectedCharacter(
-                            character,
+                        return Err(LexerError::new(
+                            LexerErrorType::unexpected_character(character),
                             self.line,
                             self.column,
                             self.file,
@@ -200,7 +199,12 @@ impl Lexer {
                 let next = *next;
 
                 if next == '\n' {
-                    return Err(LexerError::UnterminatedString(line, col, self.file.clone()));
+                    return Err(LexerError::new(
+                        LexerErrorType::UnterminatedString,
+                        line,
+                        col,
+                        self.file.clone(),
+                    ));
                 } else if next == '"' {
                     self.increment_col::<1>();
                     break;
@@ -212,7 +216,12 @@ impl Lexer {
                 self.increment_col::<1>();
                 s.push(next);
             } else {
-                return Err(LexerError::UnterminatedString(line, col, self.file.clone()));
+                return Err(LexerError::new(
+                    LexerErrorType::UnterminatedString,
+                    line,
+                    col,
+                    self.file.clone(),
+                ));
             }
         }
 
@@ -236,7 +245,8 @@ impl Lexer {
 
         match self.current_char() {
             Some('\'') => {
-                return Err(LexerError::EmptyCharacterLiteral(
+                return Err(LexerError::new(
+                    LexerErrorType::EmptyCharacterLiteral,
                     line,
                     col,
                     self.file.clone(),
@@ -250,7 +260,8 @@ impl Lexer {
                 self.consume_characters::<1>();
             }
             None => {
-                return Err(LexerError::UnterminatedCharacterLiteral(
+                return Err(LexerError::new(
+                    LexerErrorType::UnterminatedCharacterLiteral,
                     line,
                     col,
                     self.file.clone(),
@@ -263,16 +274,16 @@ impl Lexer {
                 self.consume_characters::<1>();
             }
             Some(ch) => {
-                return Err(LexerError::UnexpectedCharacterExpected(
-                    *ch,
-                    "\'".to_string(),
+                return Err(LexerError::new(
+                    LexerErrorType::unexpected_character_expected(*ch, "\'".to_string()),
                     self.line,
                     self.column,
                     self.file.clone(),
                 ));
             }
             None => {
-                return Err(LexerError::UnterminatedCharacterLiteral(
+                return Err(LexerError::new(
+                    LexerErrorType::UnterminatedCharacterLiteral,
                     line,
                     col,
                     self.file.clone(),
@@ -356,7 +367,8 @@ impl Lexer {
                 self.increment_col::<1>();
 
                 if self.index + 10 >= self.characters.len() {
-                    return Err(LexerError::InvalidUnicodeEscapeSequenceLength(
+                    return Err(LexerError::new(
+                        LexerErrorType::InvalidUnicodeEscapeSequenceLength,
                         line,
                         col,
                         self.file.clone(),
@@ -390,8 +402,8 @@ impl Lexer {
         if let Ok(u) = hex::decode(&string) {
             unicode = u;
         } else {
-            return Err(LexerError::InvalidUnicodeEscapeSequence(
-                string,
+            return Err(LexerError::new(
+                LexerErrorType::invalid_unicode_escape_sequence(string),
                 line,
                 col,
                 file.clone(),
@@ -399,12 +411,17 @@ impl Lexer {
         }
 
         let string = std::str::from_utf8(&unicode).map_err(|_| {
-            LexerError::InvalidUnicodeEscapeSequence(string, line, col, file.clone())
+            LexerError::new(
+                LexerErrorType::invalid_unicode_escape_sequence(string),
+                line,
+                col,
+                file.clone(),
+            )
         })?;
 
         if string.chars().size_hint().0 != 1 {
-            return Err(LexerError::InvalidUnicodeEscapeSequence(
-                string.to_string(),
+            return Err(LexerError::new(
+                LexerErrorType::invalid_unicode_escape_sequence(string.to_string()),
                 line,
                 col,
                 file.clone(),
@@ -508,7 +525,10 @@ mod tests {
                 let input = "\"my string";
                 let error = Lexer::new(input.chars().collect()).tokenize().unwrap_err();
 
-                assert_eq!(error, LexerError::UnterminatedString(1, 1, None));
+                assert_eq!(
+                    error,
+                    LexerError::new(LexerErrorType::UnterminatedString, 1, 1, None)
+                );
             }
 
             #[test]
@@ -639,7 +659,10 @@ mod tests {
                 let input = "\'";
                 let error = Lexer::new(input.chars().collect()).tokenize().unwrap_err();
 
-                assert_eq!(error, LexerError::UnterminatedCharacterLiteral(1, 1, None));
+                assert_eq!(
+                    error,
+                    LexerError::new(LexerErrorType::UnterminatedCharacterLiteral, 1, 1, None)
+                );
             }
 
             #[test]
