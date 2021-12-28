@@ -175,7 +175,15 @@ impl Resolver {
         // Check struct field types
         for (struct_name, struct_definition) in &module.structs {
             for (_name, field_tp) in &struct_definition.fields {
-                self.is_valid_type(field_tp, Some(struct_name), &module.name, Some(imports))?;
+                self.is_valid_type(
+                    field_tp,
+                    None,
+                    None,
+                    None,
+                    Some(struct_name),
+                    &module.name,
+                    Some(imports),
+                )?;
             }
         }
 
@@ -288,7 +296,15 @@ impl Resolver {
         imports: Option<&HashSet<String>>,
     ) -> ResolverResult<()> {
         if let Some(return_type) = return_type {
-            self.is_valid_type(return_type, None, current_module, imports)?;
+            self.is_valid_type(
+                return_type,
+                None,
+                Some(function_name),
+                None,
+                None,
+                current_module,
+                imports,
+            )?;
         }
 
         return Ok(());

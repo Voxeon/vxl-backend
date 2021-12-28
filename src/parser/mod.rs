@@ -51,11 +51,11 @@ impl Parser {
             return self.parse_preprocessor_command();
         } else {
             if self.is_at_end() {
-                return Err(ParserError::ExpectedFoundEOF(
+                return Err(ParserError::expected_found_e_o_f(
                     "top level statement (func or struct)".to_string(),
                 ));
             } else {
-                return Err(ParserError::ExpectedFound(
+                return Err(ParserError::expected_found(
                     "top level statement (func or struct)".to_string(),
                     self.current_token().unwrap().lexeme().clone(),
                 ));
@@ -70,7 +70,11 @@ impl Parser {
         let cmd = match identifier.lexeme().as_str() {
             "import" => self.parse_preprocessor_import()?,
             "begin" => self.parse_preprocessor_begin_module()?,
-            _ => return Err(ParserError::InvalidPreProcessorCommand(identifier.clone())),
+            _ => {
+                return Err(ParserError::invalid_pre_processor_command(
+                    identifier.clone(),
+                ))
+            }
         };
 
         return Ok(new_statement(
@@ -164,7 +168,9 @@ impl Parser {
             let (field_name, field_tp) = self.parse_field()?;
 
             if fields.insert(field_name.clone(), field_tp).is_some() {
-                return Err(ParserError::FieldAlreadyDefinedForStruct(field_name, name));
+                return Err(ParserError::field_already_defined_for_struct(
+                    field_name, name,
+                ));
             }
 
             self.consume_token_one([TokenType::NewLineToken])?;
@@ -356,7 +362,7 @@ impl Parser {
             if self.matches_one(break_types) {
                 break;
             } else if self.is_at_end() {
-                return Err(ParserError::UnterminatedBlock(block_token.clone()));
+                return Err(ParserError::unterminated_block(block_token.clone()));
             }
 
             statements.push(self.parse_statement()?);
@@ -397,7 +403,7 @@ impl Parser {
             if expr.borrow().is_assignable_expression() {
                 expr = new_expression(ExpressionNode::assignment_expression(expr, arrow, value));
             } else {
-                return Err(ParserError::InvalidAssignmentTarget(arrow));
+                return Err(ParserError::invalid_assignment_target(arrow));
             }
         }
 
@@ -559,14 +565,14 @@ impl Parser {
                 }
 
                 if self.is_at_end() {
-                    return Err(ParserError::ExpectedFoundEOF(")".to_string()));
+                    return Err(ParserError::expected_found_e_o_f(")".to_string()));
                 } else {
                     self.consume_token_one([TokenType::CloseRoundBraceToken])
                         .unwrap();
                 }
 
                 if arguments.len() > 255 {
-                    return Err(ParserError::TooManyFunctionArguments(open_brace));
+                    return Err(ParserError::too_many_function_arguments(open_brace));
                 }
             }
 
@@ -624,7 +630,7 @@ impl Parser {
             let tok = self.consume_token_one([TokenType::IntegerLiteralToken])?;
             let int: i64 = match tok.lexeme().parse() {
                 Ok(i) => i,
-                Err(_) => return Err(ParserError::InvalidIntegerLiteral(tok)),
+                Err(_) => return Err(ParserError::invalid_integer_literal(tok)),
             };
 
             return Ok(new_expression(ExpressionNode::literal_expression(
@@ -636,7 +642,7 @@ impl Parser {
             let tok = self.consume_token_one([TokenType::DoubleLiteralToken])?;
             let dbl: f64 = match tok.lexeme().parse() {
                 Ok(i) => i,
-                Err(_) => return Err(ParserError::InvalidDoubleLiteral(tok)),
+                Err(_) => return Err(ParserError::invalid_double_literal(tok)),
             };
 
             return Ok(new_expression(ExpressionNode::literal_expression(
@@ -689,7 +695,7 @@ impl Parser {
             )));
         }
 
-        return Err(ParserError::UnexpectedToken(
+        return Err(ParserError::unexpected_token(
             self.current_token().unwrap().clone(),
         ));
     }
@@ -734,9 +740,9 @@ impl Parser {
             }
 
             if self.is_at_end() {
-                return Err(ParserError::ExpectedFoundEOF(s));
+                return Err(ParserError::expected_found_e_o_f(s));
             } else {
-                return Err(ParserError::ExpectedFound(
+                return Err(ParserError::expected_found(
                     s,
                     self.current_token().unwrap().lexeme().clone(),
                 ));
@@ -756,9 +762,9 @@ impl Parser {
     #[inline]
     fn expected_found_error(&self, expected: String) -> ParserError {
         if self.is_at_end() {
-            return ParserError::ExpectedFoundEOF(expected);
+            return ParserError::expected_found_e_o_f(expected);
         } else {
-            return ParserError::ExpectedFound(
+            return ParserError::expected_found(
                 expected,
                 self.current_token().unwrap().lexeme().clone(),
             );

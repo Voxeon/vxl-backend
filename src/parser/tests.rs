@@ -974,7 +974,7 @@ mod test_variable {
             (TokenType::IntegerLiteralToken, "44"),
         ]);
 
-        let e = ParserError::InvalidAssignmentTarget(tokens[1].clone());
+        let e = ParserError::invalid_assignment_target(tokens[1].clone());
         let mut parser = new_default_parser(tokens);
         assert_eq!(parser.parse_expression().unwrap_err(), e);
     }
@@ -1074,7 +1074,7 @@ mod test_if {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = ParserError::ExpectedFound("new line".to_string(), "3".to_string());
+        let cmp = ParserError::expected_found("new line".to_string(), "3".to_string());
 
         let mut parser = new_default_parser(tokens);
         assert_eq!(parser.parse_statement().unwrap_err(), cmp);
@@ -1231,7 +1231,7 @@ mod test_while {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = ParserError::ExpectedFound("while".to_string(), "if".to_string());
+        let cmp = ParserError::expected_found("while".to_string(), "if".to_string());
 
         let mut parser = new_default_parser(tokens);
         assert_eq!(parser.parse_statement().unwrap_err(), cmp);
@@ -1252,7 +1252,7 @@ mod test_while {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = ParserError::ExpectedFound("new line".to_string(), "2".to_string());
+        let cmp = ParserError::expected_found("new line".to_string(), "2".to_string());
 
         let mut parser = new_default_parser(tokens);
         assert_eq!(parser.parse_statement().unwrap_err(), cmp);
@@ -1803,7 +1803,7 @@ mod test_struct_definition {
         ]);
 
         let cmp =
-            ParserError::FieldAlreadyDefinedForStruct("field_b".to_string(), tokens[1].clone());
+            ParserError::field_already_defined_for_struct("field_b".to_string(), tokens[1].clone());
         let mut parser = new_default_parser(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap_err(), cmp);
