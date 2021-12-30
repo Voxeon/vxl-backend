@@ -5,12 +5,6 @@ use super::{
 
 use std::collections::HashMap;
 
-macro_rules! hashmap {
-    [$($k:expr ; $v:expr),*] => {
-        vec![$(($k, $v)),*].into_iter().collect()
-    };
-}
-
 #[inline]
 fn new_tokens<const N: usize>(contents: [(TokenType, &str); N]) -> Vec<Token> {
     let mut tokens = Vec::new();

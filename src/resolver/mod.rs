@@ -18,17 +18,8 @@ pub struct Resolver {
     include_std_library: bool,
 }
 
+#[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub struct Resolution;
-
-macro_rules! with_wrapper {
-    ($method_name:ident, $n:ident, $tp:ty) => {
-        pub fn $method_name(mut self, $n: $tp) -> Self {
-            self.$n = $n;
-
-            return self;
-        }
-    };
-}
 
 impl Resolver {
     pub fn new() -> Self {
@@ -42,6 +33,7 @@ impl Resolver {
         };
     }
 
+    with_wrapper!(with_modules, modules, HashMap<String, CompilableModule>);
     with_wrapper!(with_type_checking, type_checking, bool);
     with_wrapper!(with_name_checking, name_checking, bool);
     with_wrapper!(with_definition_checking, definition_checking, bool);
@@ -181,7 +173,7 @@ impl Resolver {
                     None,
                     None,
                     Some(struct_name),
-                    &module.name,
+                    module,
                     Some(imports),
                 )?;
             }
@@ -196,14 +188,7 @@ impl Resolver {
                 body,
             } = &*function_statement.borrow()
             {
-                self.check_function(
-                    name,
-                    arguments,
-                    return_type,
-                    body,
-                    &module.name,
-                    Some(imports),
-                )?;
+                self.check_function(name, arguments, return_type, body, module, Some(imports))?;
             } else {
                 panic!("Internal Error: Unexpected statement in the \"{}\" module. Function name: \"{}\"", module.name, f_name);
             }
@@ -219,7 +204,7 @@ impl Resolver {
         current_function: Option<&Token>,
         custom_message: Option<&String>,
         current_struct: Option<&String>,
-        current_module: &str,
+        current_module: &CompilableModule,
         imports: Option<&HashSet<String>>,
     ) -> ResolverResult<()> {
         if let Type::Array(nested) = tp {
@@ -235,14 +220,20 @@ impl Resolver {
         } else if let Type::Struct { name, module } = tp {
             let found_module = {
                 if let Some(imports) = imports {
-                    imports.contains(module) || module == current_module
+                    imports.contains(module) || module == &current_module.name
                 } else {
-                    module == current_module
+                    module == &current_module.name
                 }
             };
 
             if found_module {
-                let m = self.lookup_module(module).unwrap();
+                let m = {
+                    if module == &current_module.name {
+                        current_module
+                    } else {
+                        self.lookup_module(module).unwrap()
+                    }
+                };
 
                 if m.structs.contains_key(name) {
                     return Ok(());
@@ -278,7 +269,7 @@ impl Resolver {
             } else {
                 return Err(ResolverError::module_not_imported(
                     module.clone(),
-                    current_module.to_string(),
+                    current_module.name.clone(),
                 ));
             }
         } else {
@@ -292,7 +283,7 @@ impl Resolver {
         function_arguments: &HashMap<String, Type>,
         return_type: &Option<Type>,
         body: &Vec<Statement>,
-        current_module: &str,
+        current_module: &CompilableModule,
         imports: Option<&HashSet<String>>,
     ) -> ResolverResult<()> {
         if let Some(return_type) = return_type {
@@ -307,10 +298,29 @@ impl Resolver {
             )?;
         }
 
-        return Ok(());
+        for (_name, tp) in function_arguments {
+            self.is_valid_type(
+                tp,
+                None,
+                Some(function_name),
+                None,
+                None,
+                current_module,
+                imports,
+            )?;
+        }
+
+        return self.check_block(true, return_type, body);
     }
 
-    fn check_block() {}
+    fn check_block(
+        &self,
+        return_allowed: bool,
+        return_type: &Option<Type>,
+        statements: &Vec<Statement>,
+    ) -> ResolverResult<()> {
+        todo!();
+    }
 
     fn lookup_module(&self, name: &str) -> Option<&CompilableModule> {
         let mut m = self.processed_modules.get(name);
@@ -335,3 +345,6 @@ impl Default for Resolver {
         };
     }
 }
+
+#[cfg(test)]
+mod tests;

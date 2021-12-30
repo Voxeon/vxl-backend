@@ -36,3 +36,21 @@ macro_rules! struct_enum_with_functional_inits {
         }
     };
 }
+
+macro_rules! with_wrapper {
+    ($method_name:ident, $n:ident, $tp:ty) => {
+        pub fn $method_name(mut self, $n: $tp) -> Self {
+            self.$n = $n;
+
+            return self;
+        }
+    };
+}
+
+// Used in testing
+#[allow(unused_macros)]
+macro_rules! hashmap {
+    [$($k:expr ; $v:expr),*] => {
+        vec![$(($k, $v)),*].into_iter().collect()
+    };
+}

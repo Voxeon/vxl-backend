@@ -243,12 +243,6 @@ mod tests {
     use crate::ast::{new_statement, StatementNode};
     use crate::lexer::token::Token;
 
-    macro_rules! hashmap {
-        [$($k:expr ; $v:expr),*] => {
-            vec![$(($k, $v)),*].into_iter().collect()
-        };
-    }
-
     #[test]
     fn test_single_function() {
         let mut input = VecDeque::new();
