@@ -1,3 +1,5 @@
+pub mod compilable;
+
 mod ast;
 mod expression;
 mod statement;

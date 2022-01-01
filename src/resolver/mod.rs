@@ -1,17 +1,17 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::ast::{Statement, StatementNode, Type};
+use crate::ast::{Expression, Statement, StatementNode, Type};
 use crate::error::ResolverError;
 use crate::lexer::token::Token;
-use crate::pre_processor::{CompilableModule, ObjectName};
+use crate::pre_processor::{ObjectName, ProcessedModule};
 use crate::ROOT_MODULE_NAME;
 
 type ResolverResult<T> = Result<T, ResolverError>;
 
 /// Performs type checking and importing of the standard library.
 pub struct Resolver {
-    modules: HashMap<String, CompilableModule>,
-    processed_modules: HashMap<String, CompilableModule>,
+    modules: HashMap<String, ProcessedModule>,
+    processed_modules: HashMap<String, ProcessedModule>,
     type_checking: bool,
     name_checking: bool,
     definition_checking: bool,
@@ -33,7 +33,7 @@ impl Resolver {
         };
     }
 
-    with_wrapper!(with_modules, modules, HashMap<String, CompilableModule>);
+    with_wrapper!(with_modules, modules, HashMap<String, ProcessedModule>);
     with_wrapper!(with_type_checking, type_checking, bool);
     with_wrapper!(with_name_checking, name_checking, bool);
     with_wrapper!(with_definition_checking, definition_checking, bool);
@@ -86,12 +86,12 @@ impl Resolver {
         todo!();
     }
 
-    fn import_check(&mut self, module: &CompilableModule) -> ResolverResult<HashSet<String>> {
+    fn import_check(&mut self, module: &ProcessedModule) -> ResolverResult<HashSet<String>> {
         fn handle_module_found(
             missing_modules_errors: &mut Vec<ResolverError>,
             required_modules: &mut HashSet<String>,
             import: &ObjectName,
-            referenced_module: &CompilableModule,
+            referenced_module: &ProcessedModule,
         ) {
             if referenced_module
                 .functions
@@ -161,7 +161,7 @@ impl Resolver {
 
     fn depth_resolution(
         &mut self,
-        module: &CompilableModule,
+        module: &ProcessedModule,
         imports: &HashSet<String>,
     ) -> ResolverResult<()> {
         // Check struct field types
@@ -204,7 +204,7 @@ impl Resolver {
         current_function: Option<&Token>,
         custom_message: Option<&String>,
         current_struct: Option<&String>,
-        current_module: &CompilableModule,
+        current_module: &ProcessedModule,
         imports: Option<&HashSet<String>>,
     ) -> ResolverResult<()> {
         if let Type::Array(nested) = tp {
@@ -283,7 +283,7 @@ impl Resolver {
         function_arguments: &HashMap<String, Type>,
         return_type: &Option<Type>,
         body: &Vec<Statement>,
-        current_module: &CompilableModule,
+        current_module: &ProcessedModule,
         imports: Option<&HashSet<String>>,
     ) -> ResolverResult<()> {
         if let Some(return_type) = return_type {
@@ -310,19 +310,141 @@ impl Resolver {
             )?;
         }
 
-        return self.check_block(true, return_type, body);
+        return self.check_block(
+            function_name,
+            true,
+            return_type,
+            body,
+            current_module,
+            imports,
+        );
     }
 
     fn check_block(
         &self,
+        function_reference_token: &Token,
         return_allowed: bool,
         return_type: &Option<Type>,
         statements: &Vec<Statement>,
+        current_module: &ProcessedModule,
+        imports: Option<&HashSet<String>>,
     ) -> ResolverResult<()> {
+        for statement in statements {
+            self.check_statement(
+                function_reference_token,
+                return_allowed,
+                return_type,
+                current_module,
+                imports,
+                statement,
+            )?;
+        }
+
+        return Ok(());
+    }
+
+    fn check_statement(
+        &self,
+        function_reference_token: &Token,
+        return_allowed: bool,
+        return_type: &Option<Type>,
+        current_module: &ProcessedModule,
+        imports: Option<&HashSet<String>>,
+        statement: &Statement,
+    ) -> ResolverResult<()> {
+        return match &*statement.borrow() {
+            StatementNode::ExpressionStatement { expr } => {
+                self.check_expression(current_module, imports, expr)?;
+
+                Ok(())
+            }
+            StatementNode::ReturnStatement { keyword, value } => {
+                if !return_allowed {
+                    return Err(ResolverError::no_return_statement_permitted(
+                        keyword.clone(),
+                    ));
+                }
+
+                if let Some(return_value) = value {
+                    if let Some(return_type) = return_type {
+                        let tp = self.check_expression(current_module, imports, return_value)?;
+
+                        if !tp.is_same_type(return_type) {
+                            return Err(ResolverError::return_type_does_not_match(
+                                function_reference_token.clone(),
+                                Some(return_type.clone()),
+                                Some(tp),
+                            ));
+                        } else {
+                            return Ok(());
+                        }
+                    }
+                } else if value.is_none() && return_type.is_none() {
+                    return Ok(());
+                }
+
+                return Err(ResolverError::return_type_does_not_match(
+                    function_reference_token.clone(),
+                    return_type.clone(),
+                    None,
+                ));
+            }
+            StatementNode::VariableDeclarationStatement {
+                keyword,
+                name,
+                initializer,
+            } => todo!(),
+            StatementNode::BlockStatement { open_brace, body } => todo!(),
+            StatementNode::WhileStatement {
+                keyword,
+                condition,
+                body,
+            } => todo!(),
+            StatementNode::ForStatement {
+                keyword,
+                variable_name,
+                start,
+                stop,
+                step,
+                body,
+            } => todo!(),
+            StatementNode::IfStatement {
+                keyword,
+                condition,
+                body,
+                else_body,
+            } => todo!(),
+            StatementNode::FunctionStatement {
+                keyword,
+                name,
+                arguments,
+                return_type,
+                body,
+            } => todo!(),
+            StatementNode::StructStatement {
+                keyword,
+                name,
+                fields,
+            } => todo!(),
+            StatementNode::PreProcessorCommandStatement { symbol, command: _ } => {
+                panic!(
+                    "Unexpected pre-processor command statement in the resolver. Symbol: {:?}",
+                    symbol
+                );
+            }
+        };
+    }
+
+    fn check_expression(
+        &self,
+        current_module: &ProcessedModule,
+        imports: Option<&HashSet<String>>,
+        expression: &Expression,
+    ) -> ResolverResult<Type> {
         todo!();
     }
 
-    fn lookup_module(&self, name: &str) -> Option<&CompilableModule> {
+    fn lookup_module(&self, name: &str) -> Option<&ProcessedModule> {
         let mut m = self.processed_modules.get(name);
 
         if m.is_none() {

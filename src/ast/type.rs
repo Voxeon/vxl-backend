@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     Boolean,
@@ -59,6 +61,19 @@ impl TypeSize for Type {
             Type::Character => 4,
             Type::Struct { .. } => POINTER_SIZE,
             Type::Array(..) => POINTER_SIZE,
+        };
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        return match self {
+            Type::Boolean => write!(f, "bool"),
+            Type::Integer => write!(f, "integer"),
+            Type::Float => write!(f, "float"),
+            Type::Character => write!(f, "char"),
+            Type::Struct { name, module } => write!(f, "{}<{}>", name, module),
+            Type::Array(tp) => write!(f, "[{}]", tp),
         };
     }
 }

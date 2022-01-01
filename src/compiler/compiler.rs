@@ -3,17 +3,17 @@
 use super::operation::Operation;
 use super::Backend;
 use crate::ast::StatementNode;
-use crate::pre_processor::CompilableModule;
+use crate::pre_processor::ProcessedModule;
 
 use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
 pub struct Compiler {
-    modules: HashMap<String, CompilableModule>,
+    modules: HashMap<String, ProcessedModule>,
 }
 
 impl Compiler {
-    pub fn new(modules: HashMap<String, CompilableModule>) -> Self {
+    pub fn new(modules: HashMap<String, ProcessedModule>) -> Self {
         return Self { modules };
     }
 
@@ -25,7 +25,7 @@ impl Compiler {
         todo!();
     }
 
-    fn process_module(&mut self, module: CompilableModule) {
+    fn process_module(&mut self, module: ProcessedModule) {
         for (method_name, root_statement) in module.functions {
             //     self.append_operation(Operation::DefineFunction(method_name.clone()));
 

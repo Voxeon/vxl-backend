@@ -1,10 +1,11 @@
+use crate::ast::Type;
 use crate::lexer::token::Token;
 use crate::ROOT_MODULE_NAME;
 
 use std::error::Error as ErrorTrait;
 use std::fmt;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum VoxlError<BE: ErrorTrait> {
     IOError(String),
     CustomError(String),
@@ -106,7 +107,7 @@ struct_enum_with_functional_inits! {
 
 struct_enum_with_functional_inits! {
     pub
-    [Clone, Debug, PartialEq, Eq, Hash]
+    [Clone, Debug, PartialEq, Eq]
     ResolverError {
         NoRootModuleDefined
         NoModuleDefined {
@@ -141,8 +142,13 @@ struct_enum_with_functional_inits! {
             import_module: String,
             current_module: String
         }
-        Multiple {
-            errors: Vec<ResolverError>
+        NoReturnStatementPermitted {
+            return_statement: Token
+        }
+        ReturnTypeDoesNotMatch {
+            function_reference_token: Token,
+            function_return_type: Option<Type>,
+            return_type: Option<Type>
         }
     }
 }
@@ -333,16 +339,6 @@ impl fmt::Display for ResolverError {
                     ROOT_MODULE_NAME, ROOT_MODULE_NAME
                 )
             }
-            ResolverError::Multiple { errors } => {
-                write!(
-                    f,
-                    "{}",
-                    errors
-                        .iter()
-                        .map(|e| [e.to_string(), String::from("\n")].join(""))
-                        .collect::<String>()
-                )
-            }
             ResolverError::NoModuleDefined { module } => {
                 write!(
                     f,
@@ -409,7 +405,48 @@ impl fmt::Display for ResolverError {
                     current_module
                 )
             }
-            ResolverError::NoObjectDefinedWithNameInModuleInFunction { .. } => todo!(),
+            ResolverError::NoReturnStatementPermitted { return_statement } => {
+                write!(
+                    f,
+                    "Return statements are not permitted here {}",
+                    return_statement
+                )
+            }
+            ResolverError::ReturnTypeDoesNotMatch {
+                function_reference_token,
+                function_return_type,
+                return_type,
+            } => {
+                let f_return_string;
+                let return_tp_string;
+
+                if let Some(function_return_type) = function_return_type {
+                    f_return_string = function_return_type.to_string();
+                } else {
+                    f_return_string = "No Value".to_string();
+                }
+
+                if let Some(return_type) = return_type {
+                    return_tp_string = return_type.to_string();
+                } else {
+                    return_tp_string = "No Value".to_string();
+                }
+
+                write!(
+                    f,
+                    "Return type does not match function definition ({} != {}) {}",
+                    f_return_string, return_tp_string, function_reference_token
+                )
+            }
+            ResolverError::NoObjectDefinedWithNameInModuleInFunction {
+                object,
+                module,
+                function,
+            } => write!(
+                f,
+                "No object defined with the name '{}' in the module '{}', function: '{}'",
+                object, module, function
+            ),
         };
     }
 }

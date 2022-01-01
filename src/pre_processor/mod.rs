@@ -2,4 +2,4 @@ mod command;
 mod processor;
 
 pub use command::PreProcessorCommand;
-pub use processor::{CompilableModule, ObjectName, PreProcessor};
+pub use processor::{ProcessedModule, ObjectName, PreProcessor};

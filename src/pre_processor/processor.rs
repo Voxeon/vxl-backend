@@ -21,7 +21,7 @@ pub struct StructDefinition {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CompilableModule {
+pub struct ProcessedModule {
     pub(crate) name: String,
     pub(crate) imports: Vec<ObjectName>,
     pub(crate) functions: HashMap<String, Statement>,
@@ -54,7 +54,7 @@ impl PreProcessor {
         };
     }
 
-    pub fn process(mut self) -> PreProcessorResult<HashMap<String, CompilableModule>> {
+    pub fn process(mut self) -> PreProcessorResult<HashMap<String, ProcessedModule>> {
         while let Some(mut tree) = self.trees.pop_front() {
             while let Some(stmt) = tree.pop_front() {
                 if self.current_module_name.is_none() {
@@ -100,7 +100,7 @@ impl PreProcessor {
 
             output.insert(
                 module.lexeme().clone(),
-                CompilableModule {
+                ProcessedModule {
                     name: module.lexeme().clone(),
                     imports: self.imports.remove(module.lexeme()).unwrap_or(Vec::new()),
                     functions,
@@ -276,7 +276,7 @@ mod tests {
 
         assert_eq!(
             processor.process().unwrap(),
-            hashmap![ROOT_MODULE_NAME.to_string() ; CompilableModule {
+            hashmap![ROOT_MODULE_NAME.to_string() ; ProcessedModule {
                 name: ROOT_MODULE_NAME.to_string(),
                 imports: Vec::new(),
                 functions: hashmap!["main".to_string() ; main_function_stmt],
@@ -316,7 +316,7 @@ mod tests {
 
         assert_eq!(
             processor.process().unwrap(),
-            hashmap![ROOT_MODULE_NAME.to_string() ; CompilableModule {
+            hashmap![ROOT_MODULE_NAME.to_string() ; ProcessedModule {
                 name: ROOT_MODULE_NAME.to_string(),
                 imports: Vec::new(),
                 functions: HashMap::new(),
@@ -361,7 +361,7 @@ mod tests {
 
         assert_eq!(
             processor.process().unwrap(),
-            hashmap![ROOT_MODULE_NAME.to_string() ; CompilableModule {
+            hashmap![ROOT_MODULE_NAME.to_string() ; ProcessedModule {
                 name: ROOT_MODULE_NAME.to_string(),
                 imports: vec![ObjectName {
                     module: module,
@@ -414,7 +414,7 @@ mod tests {
 
         assert_eq!(
             processor.process().unwrap(),
-            hashmap![ROOT_MODULE_NAME.to_string() ; CompilableModule {
+            hashmap![ROOT_MODULE_NAME.to_string() ; ProcessedModule {
                 name: ROOT_MODULE_NAME.to_string(),
                 imports: Vec::new(),
                 functions: hashmap!["main".to_string() ; main_function_stmt],
@@ -499,7 +499,7 @@ mod tests {
 
         assert_eq!(
             processor.process().unwrap(),
-            hashmap![ROOT_MODULE_NAME.to_string() ; CompilableModule {
+            hashmap![ROOT_MODULE_NAME.to_string() ; ProcessedModule {
                 name: ROOT_MODULE_NAME.to_string(),
                 imports: Vec::new(),
                 functions: hashmap!["main".to_string() ; main_function_stmt],
@@ -507,7 +507,7 @@ mod tests {
                     name: "my_struct".to_string(),
                     fields: HashMap::new(),
                 }],
-            }, "second".to_string() ; CompilableModule {
+            }, "second".to_string() ; ProcessedModule {
                 name: "second".to_string(),
                 imports: Vec::new(),
                 functions: hashmap!["second".to_string() ; second_function_stmt],
