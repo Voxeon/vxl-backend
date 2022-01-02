@@ -39,6 +39,14 @@ impl ArrayLiteral {
     pub fn get_type(&self) -> Type {
         return self.tp.clone();
     }
+
+    pub fn get_type_ref(&self) -> &Type {
+        return &self.tp;
+    }
+
+    pub fn contents(&self) -> &Vec<Value> {
+        return &self.contents;
+    }
 }
 
 impl TryFrom<Vec<Value>> for ArrayLiteral {

@@ -37,6 +37,43 @@ macro_rules! struct_enum_with_functional_inits {
     };
 }
 
+macro_rules! generate_is_variants {
+    ($($($variant_name:ident),*,)? $(($($tuple_variant_name:ident),*),)? $({$($struct_variant_name:ident),*})?) => {
+        $($(
+            paste::paste! {
+                pub fn [<is_ $variant_name:snake:lower>](&self) -> bool {
+                    return match self {
+                        Self::$variant_name => true,
+                        _ => false,
+                    };
+                }
+            }
+        )*)?
+
+        $($(
+            paste::paste! {
+                pub fn [<is_ $tuple_variant_name:snake:lower>](&self) -> bool {
+                    return match self {
+                        Self::$tuple_variant_name( .. ) => true,
+                        _ => false,
+                    };
+                }
+            }
+        )*)?
+
+        $($(
+            paste::paste! {
+                pub fn [<is_ $struct_variant_name:snake:lower>](&self) -> bool {
+                    return match self {
+                        Self::$struct_variant_name { .. } => true,
+                        _ => false,
+                    };
+                }
+            }
+        )*)?
+    }
+}
+
 macro_rules! with_wrapper {
     ($method_name:ident, $n:ident, $tp:ty) => {
         pub fn $method_name(mut self, $n: $tp) -> Self {

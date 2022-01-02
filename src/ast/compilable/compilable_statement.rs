@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::CompilableExpression;
+use crate::ast::compilable::CompilableBlock;
 use crate::ast::Type;
 
 pub type CompilableStatement = Rc<RefCell<CompilableStatementNode>>;
@@ -12,7 +13,7 @@ struct_enum_with_functional_inits! {
     CompilableStatementNode {
         ExpressionStatement {
             expr: CompilableExpression,
-            expression_type: Type
+            expression_type: Option<Type>
         }
         ReturnStatement {
             value: Option<CompilableExpression>,
@@ -26,7 +27,7 @@ struct_enum_with_functional_inits! {
         WhileStatement {
             // Condition must be guaranteed to be a boolean type in a compilable while statement
             condition: CompilableExpression,
-            body: Vec<CompilableStatement>
+            body: CompilableBlock
         }
         ForStatement {
             variable_name: String,
@@ -34,13 +35,16 @@ struct_enum_with_functional_inits! {
             start: CompilableExpression,
             stop: CompilableExpression,
             step: CompilableExpression,
-            body: Vec<CompilableStatement>
+            body: CompilableBlock
         }
         IfStatement {
             // Condition must be guaranteed to be a boolean type in a compilable while statement
             condition: CompilableExpression,
-            body: Vec<CompilableStatement>,
-            else_body: Option<Vec<CompilableStatement>>
+            body: CompilableBlock,
+            else_body: Option<CompilableBlock>
+        }
+        Block {
+            block: CompilableBlock
         }
         // FunctionStatement {
         //     name: String,
@@ -52,5 +56,11 @@ struct_enum_with_functional_inits! {
         //     name: String,
         //     fields: HashMap<String, Type>
         // }
+    }
+}
+
+impl CompilableStatementNode {
+    pub fn wrapped(self) -> CompilableStatement {
+        return Rc::new(RefCell::new(self));
     }
 }

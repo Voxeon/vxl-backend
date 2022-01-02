@@ -11,8 +11,9 @@ struct_enum_with_functional_inits! {
     [Debug, Clone, PartialEq]
     ExpressionNode {
         ArrayAllocationExpression {
+            reference_token: Token,
             array_type : ArrayLiteral,
-            count : Token
+            count : Expression
         }
         LiteralExpression {
             value: Value

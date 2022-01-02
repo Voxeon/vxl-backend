@@ -87,6 +87,11 @@ struct_enum_with_functional_inits! {
             field_name: String,
             struct_name: Token
         }
+        StringLiteralLongerThanMax {
+            string: Token,
+            length: usize,
+            max_length: usize
+        }
     }
 }
 
@@ -132,7 +137,7 @@ struct_enum_with_functional_inits! {
         NoObjectDefinedWithNameInModuleInFunction {
             object: String,
             module: String,
-            function: Token
+            reference_token: Token
         }
         NoObjectDefined {
             object: Token,
@@ -149,6 +154,39 @@ struct_enum_with_functional_inits! {
             function_reference_token: Token,
             function_return_type: Option<Type>,
             return_type: Option<Type>
+        }
+        VariableDeclarationRequiresValue {
+            name: Token
+        }
+        FunctionDefinitionForbiddenHere {
+            name: Token
+        }
+        StructDefinitionForbiddenHere {
+            name: Token
+        }
+        InvalidStartForLoopType {
+            reference_token: Token,
+            tp: Option<Type>
+        }
+        InvalidStopForLoopType {
+            reference_token: Token,
+            tp: Option<Type>
+        }
+        InvalidStepForLoopType {
+            reference_token: Token,
+            tp: Option<Type>
+        }
+        InvalidWhileLoopConditionType {
+            reference_token: Token,
+            tp: Option<Type>
+        }
+        InvalidIfConditionType {
+            reference_token: Token,
+            tp: Option<Type>
+        }
+        InvalidArrayLiteralCountType {
+            reference_token: Token,
+            tp: Option<Type>
         }
     }
 }
@@ -290,6 +328,15 @@ impl fmt::Display for ParserError {
                     field_name, struct_name
                 )
             }
+            ParserError::StringLiteralLongerThanMax {
+                string,
+                length,
+                max_length,
+            } => write!(
+                f,
+                "The string '{}' of length {} is longer than the maximum allowed length({})",
+                string, length, max_length
+            ),
         };
     }
 }
@@ -441,12 +488,115 @@ impl fmt::Display for ResolverError {
             ResolverError::NoObjectDefinedWithNameInModuleInFunction {
                 object,
                 module,
-                function,
+                reference_token,
             } => write!(
                 f,
-                "No object defined with the name '{}' in the module '{}', function: '{}'",
-                object, module, function
+                "No object defined with the name '{}' in the module '{}', {}",
+                object, module, reference_token
             ),
+            ResolverError::VariableDeclarationRequiresValue { name } => {
+                write!(f, "Variable declaration requires a value {}", name)
+            }
+            ResolverError::FunctionDefinitionForbiddenHere { name } => write!(
+                f,
+                "Cannot define a new function here. Define a new function at the top level. {}",
+                name
+            ),
+            ResolverError::StructDefinitionForbiddenHere { name } => write!(
+                f,
+                "Cannot define a new struct here. Define a new struct at the top level. {}",
+                name
+            ),
+            ResolverError::InvalidStartForLoopType {
+                reference_token,
+                tp,
+            } => {
+                let tp_string = tp
+                    .as_ref()
+                    .map(|tp| tp.to_string())
+                    .unwrap_or("No Value".to_string());
+
+                write!(
+                    f,
+                    "The start value for a for loop must be an integer value not '{}' {}",
+                    tp_string, reference_token
+                )
+            }
+            ResolverError::InvalidStopForLoopType {
+                reference_token,
+                tp,
+            } => {
+                let tp_string = tp
+                    .as_ref()
+                    .map(|tp| tp.to_string())
+                    .unwrap_or("No Value".to_string());
+
+                write!(
+                    f,
+                    "The stop value for a for loop must be an integer value not '{}' {}",
+                    tp_string, reference_token
+                )
+            }
+            ResolverError::InvalidStepForLoopType {
+                reference_token,
+                tp,
+            } => {
+                let tp_string = tp
+                    .as_ref()
+                    .map(|tp| tp.to_string())
+                    .unwrap_or("No Value".to_string());
+
+                write!(
+                    f,
+                    "The step value for a for loop must be an integer value not '{}' {}",
+                    tp_string, reference_token
+                )
+            }
+            ResolverError::InvalidWhileLoopConditionType {
+                reference_token,
+                tp,
+            } => {
+                let tp_string = tp
+                    .as_ref()
+                    .map(|tp| tp.to_string())
+                    .unwrap_or("No Value".to_string());
+
+                write!(
+                    f,
+                    "The condition for a while loop must be a boolean value not '{}' {}",
+                    tp_string, reference_token
+                )
+            }
+            ResolverError::InvalidIfConditionType {
+                reference_token,
+                tp,
+            } => {
+                let tp_string = tp
+                    .as_ref()
+                    .map(|tp| tp.to_string())
+                    .unwrap_or("No Value".to_string());
+
+                write!(
+                    f,
+                    "The condition for an if statement must be a boolean value not '{}' {}",
+                    tp_string, reference_token
+                )
+            }
+            ResolverError::InvalidArrayLiteralCountType {
+                reference_token,
+                tp,
+            } => {
+                let tp_string = tp
+                    .as_ref()
+                    .map(|tp| tp.to_string())
+                    .unwrap_or("No Value".to_string());
+
+                write!(
+                    f,
+                    "An array literal must have a count of type integer not '{}' {}",
+                    tp_string, reference_token
+                )
+            }
         };
     }
 }

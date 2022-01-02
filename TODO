@@ -2,6 +2,7 @@
     - Choose between constructors
     - Default values
     - Struct initialisation
+* Add support for arrays - indexing, assigning
 * Add compilation support
 * Check where return types are enforced.
 * Check where variable types are enforced - Require variable types be defined at instantiation

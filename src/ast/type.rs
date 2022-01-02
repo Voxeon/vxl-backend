@@ -50,6 +50,8 @@ impl Type {
             _ => return false,
         }
     }
+
+    generate_is_variants!(Boolean, Integer, Float, Character, (Array), { Struct });
 }
 
 impl TypeSize for Type {

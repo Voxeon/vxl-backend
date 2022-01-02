@@ -47,14 +47,15 @@ mod test_primary {
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::array_allocation_expression(
-                ArrayLiteral::from(&"string".to_string()),
                 Token::new(
                     TokenType::StringLiteralToken,
                     "string".to_string(),
                     1,
                     1,
                     None,
-                )
+                ),
+                ArrayLiteral::from(&"string".to_string()),
+                new_expression(ExpressionNode::literal_expression(Value::Integer(6))),
             ))
         );
     }
@@ -2100,7 +2101,6 @@ fn test_block() {
         Token::new(TokenType::BlockToken, "block".to_string(), 1, 1, None),
         vec![new_statement(StatementNode::expression_statement(
             new_expression(ExpressionNode::array_allocation_expression(
-                ArrayLiteral::from(&"string".to_string()),
                 Token::new(
                     TokenType::StringLiteralToken,
                     "string".to_string(),
@@ -2108,6 +2108,8 @@ fn test_block() {
                     1,
                     None,
                 ),
+                ArrayLiteral::from(&"string".to_string()),
+                new_expression(ExpressionNode::literal_expression(Value::Integer(6))),
             )),
         ))],
     ));

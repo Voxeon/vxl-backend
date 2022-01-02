@@ -662,9 +662,22 @@ impl Parser {
         if self.matches(TokenType::StringLiteralToken) {
             let tok = self.consume_token_one([TokenType::StringLiteralToken])?;
             let array = ArrayLiteral::from(tok.lexeme());
+            let count = array.contents().len();
+
+            if count > (i64::MAX as usize) {
+                return Err(ParserError::string_literal_longer_than_max(
+                    tok,
+                    count,
+                    i64::MAX as usize,
+                ));
+            }
+
+            let count = new_expression(ExpressionNode::literal_expression(Value::Integer(
+                count as i64,
+            )));
 
             return Ok(new_expression(ExpressionNode::array_allocation_expression(
-                array, tok,
+                tok, array, count,
             )));
         }
 

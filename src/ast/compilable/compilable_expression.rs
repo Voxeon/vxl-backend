@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::ast::{ArrayLiteral, Type, Value, Variable};
+use crate::ast::{Type, Value, Variable};
 
 pub type CompilableExpression = Rc<RefCell<CompilableExpressionNode>>;
 
@@ -10,8 +10,9 @@ struct_enum_with_functional_inits! {
     [Debug, Clone, PartialEq]
     CompilableExpressionNode {
         ArrayAllocationExpression {
-            array_type : ArrayLiteral,
-            count : u64
+            tp: Type,
+            contents: Vec<Value>,
+            count : CompilableExpression
         }
         LiteralExpression {
             value: Value
@@ -83,7 +84,8 @@ struct_enum_with_functional_inits! {
             rhs: CompilableExpression
         }
         GroupingExpression {
-            expression: CompilableExpression
+            expression: CompilableExpression,
+            tp: Option<Type>
         }
         CallExpression {
             module: Option<String>,
@@ -95,5 +97,11 @@ struct_enum_with_functional_inits! {
             module: Option<String>,
             arguments: Vec<CompilableExpression>
         }
+    }
+}
+
+impl CompilableExpressionNode {
+    pub fn wrapped(self) -> CompilableExpression {
+        return Rc::new(RefCell::new(self));
     }
 }
