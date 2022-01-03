@@ -647,6 +647,11 @@ impl Resolver {
                 module,
                 arguments,
             } => todo!(),
+            ExpressionNode::ArrayIndexExpression {
+                open_brace_token,
+                array_expression,
+                index_expression,
+            } => todo!(),
         });
     }
 

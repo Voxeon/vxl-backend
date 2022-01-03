@@ -3,7 +3,7 @@
 %import Container from structs
 
 func main -> int
-    $test <- |Numeric<structs> true, 23, 0|
+    #test <- |Numeric<structs> true, 23, 0|
     
     $a <- 5 + 2
 

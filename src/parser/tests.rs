@@ -25,11 +25,6 @@ fn new_tokens<const N: usize>(contents: [(TokenType, &str); N]) -> Vec<Token> {
     return tokens;
 }
 
-#[inline]
-fn new_default_parser(tokens: Vec<Token>) -> Parser {
-    return Parser::new(tokens);
-}
-
 mod test_primary {
     use super::*;
 
@@ -43,7 +38,7 @@ mod test_primary {
             None,
         )];
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::array_allocation_expression(
@@ -70,7 +65,7 @@ mod test_primary {
             None,
         )];
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::literal_expression(Value::Integer(55)))
@@ -87,7 +82,7 @@ mod test_primary {
             None,
         )];
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::literal_expression(Value::Float(55.22)))
@@ -104,7 +99,7 @@ mod test_primary {
             None,
         )];
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::literal_expression(Value::Boolean(true)))
@@ -121,7 +116,7 @@ mod test_primary {
             None,
         )];
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::literal_expression(Value::Boolean(false)))
@@ -138,7 +133,7 @@ mod test_primary {
             None,
         )];
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::literal_expression(Value::Character('c')))
@@ -161,7 +156,7 @@ mod test_primary {
 
         let literal = new_expression(ExpressionNode::literal_expression(Value::Character('c')));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::grouping_expression(
@@ -183,7 +178,7 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
@@ -202,7 +197,7 @@ mod test_binary_expression {
             (TokenType::DoubleLiteralToken, "52.22"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
@@ -221,7 +216,7 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
@@ -240,7 +235,7 @@ mod test_binary_expression {
             (TokenType::DoubleLiteralToken, "52.22"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
@@ -259,7 +254,7 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
@@ -274,16 +269,16 @@ mod test_binary_expression {
     fn test_divide() {
         let tokens = new_tokens([
             (TokenType::IntegerLiteralToken, "55"),
-            (TokenType::BackslashToken, "/"),
+            (TokenType::ForwardSlashToken, "/"),
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
                 new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                Token::new(TokenType::BackslashToken, "/".to_string(), 1, 3, None,),
+                Token::new(TokenType::ForwardSlashToken, "/".to_string(), 1, 3, None,),
                 new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
             ))
         );
@@ -297,7 +292,7 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
@@ -316,7 +311,7 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
@@ -341,7 +336,7 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
@@ -360,7 +355,7 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
@@ -379,7 +374,7 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
@@ -398,7 +393,7 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::binary_expression(
@@ -439,7 +434,7 @@ mod test_logical_expression {
             )),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
@@ -470,7 +465,7 @@ mod test_logical_expression {
             )),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
@@ -513,7 +508,7 @@ mod test_logical_expression {
             )),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
@@ -556,7 +551,7 @@ mod test_logical_expression {
             )),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
@@ -599,7 +594,7 @@ mod test_logical_expression {
             )),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
@@ -642,7 +637,7 @@ mod test_logical_expression {
             )),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
@@ -658,7 +653,7 @@ mod test_unary {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::unary_expression(
@@ -672,7 +667,7 @@ mod test_unary {
     fn test_not() {
         let tokens = new_tokens([(TokenType::NotToken, "not"), (TokenType::TrueToken, "true")]);
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
             new_expression(ExpressionNode::unary_expression(
@@ -702,7 +697,7 @@ mod test_function_call {
             Vec::new(),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
 
@@ -725,7 +720,7 @@ mod test_function_call {
             ))],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
 
@@ -757,7 +752,7 @@ mod test_function_call {
             ],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
 
@@ -783,7 +778,7 @@ mod test_function_call {
             ))],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
 }
@@ -805,7 +800,7 @@ mod test_constructor_call {
             Vec::new(),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
 
@@ -829,7 +824,7 @@ mod test_constructor_call {
             ],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
 
@@ -856,7 +851,7 @@ mod test_constructor_call {
             ],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
 }
@@ -867,7 +862,7 @@ mod test_variable {
     #[test]
     fn test_variable_declaration() {
         let tokens = new_tokens([
-            (TokenType::DollarToken, "$"),
+            (TokenType::HashToken, "#"),
             (TokenType::IdentifierToken, "a"),
             (TokenType::LeftArrowToken, "<-"),
             (TokenType::IntegerLiteralToken, "22"),
@@ -880,7 +875,7 @@ mod test_variable {
             new_expression(ExpressionNode::literal_expression(Value::Integer(22))),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
     }
 
@@ -899,14 +894,14 @@ mod test_variable {
             variable,
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
 
     #[test]
     fn test_variable_increment() {
         let tokens = new_tokens([
-            (TokenType::DollarToken, "$"),
+            (TokenType::HashToken, "#"),
             (TokenType::IdentifierToken, "a"),
             (TokenType::LeftArrowToken, "<-"),
             (TokenType::DollarToken, "$"),
@@ -932,7 +927,7 @@ mod test_variable {
             )),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
     }
 
@@ -957,7 +952,7 @@ mod test_variable {
             new_expression(ExpressionNode::literal_expression(Value::Integer(44))),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
 
@@ -970,8 +965,85 @@ mod test_variable {
         ]);
 
         let e = ParserError::invalid_assignment_target(tokens[1].clone());
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap_err(), e);
+    }
+}
+
+mod test_array_index {
+    use super::*;
+
+    #[test]
+    fn test_array_index_variable() {
+        let tokens = new_tokens([
+            (TokenType::DollarToken, "$"),
+            (TokenType::IdentifierToken, "a"),
+            (TokenType::OpenSquareBraceToken, "["),
+            (TokenType::IntegerLiteralToken, "52"),
+            (TokenType::CloseSquareBraceToken, "]"),
+        ]);
+
+        let mut variable = Variable::new();
+        variable.push(tokens[1].clone());
+
+        let cmp = new_expression(ExpressionNode::array_index_expression(
+            tokens[2].clone(),
+            new_expression(ExpressionNode::variable_expression(
+                tokens[0].clone(),
+                variable,
+            )),
+            new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
+        ));
+
+        let mut parser = Parser::new(tokens);
+        assert_eq!(parser.parse_expression().unwrap(), cmp);
+    }
+
+    #[test]
+    fn test_array_index_assign() {
+        let tokens = new_tokens([
+            (TokenType::DollarToken, "$"),
+            (TokenType::IdentifierToken, "a"),
+            (TokenType::OpenSquareBraceToken, "["),
+            (TokenType::IntegerLiteralToken, "1"),
+            (TokenType::CloseSquareBraceToken, "]"),
+            (TokenType::LeftArrowToken, "<-"),
+            (TokenType::DollarToken, "$"),
+            (TokenType::IdentifierToken, "b"),
+            (TokenType::OpenSquareBraceToken, "["),
+            (TokenType::IntegerLiteralToken, "0"),
+            (TokenType::CloseSquareBraceToken, "]"),
+            (TokenType::NewLineToken, "\n"),
+        ]);
+
+        let mut variable_a = Variable::new();
+        variable_a.push(tokens[1].clone());
+
+        let mut variable_b = Variable::new();
+        variable_b.push(tokens[7].clone());
+
+        let cmp = new_expression(ExpressionNode::assignment_expression(
+            new_expression(ExpressionNode::array_index_expression(
+                tokens[2].clone(),
+                new_expression(ExpressionNode::variable_expression(
+                    tokens[0].clone(),
+                    variable_a,
+                )),
+                new_expression(ExpressionNode::literal_expression(Value::Integer(1))),
+            )),
+            tokens[5].clone(),
+            new_expression(ExpressionNode::array_index_expression(
+                tokens[8].clone(),
+                new_expression(ExpressionNode::variable_expression(
+                    tokens[6].clone(),
+                    variable_b,
+                )),
+                new_expression(ExpressionNode::literal_expression(Value::Integer(0))),
+            )),
+        ));
+
+        let mut parser = Parser::new(tokens);
+        assert_eq!(parser.parse_expression().unwrap(), cmp);
     }
 }
 
@@ -1007,7 +1079,7 @@ mod test_if {
             None,
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
     }
 
@@ -1046,7 +1118,7 @@ mod test_if {
             ))]),
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
     }
 
@@ -1071,7 +1143,7 @@ mod test_if {
 
         let cmp = ParserError::expected_found("new line".to_string(), "3".to_string());
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap_err(), cmp);
     }
 }
@@ -1107,7 +1179,7 @@ mod test_while {
             ))],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
     }
 
@@ -1156,7 +1228,7 @@ mod test_while {
             ))],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
     }
 
@@ -1206,7 +1278,7 @@ mod test_while {
             ))],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
     }
 
@@ -1228,7 +1300,7 @@ mod test_while {
 
         let cmp = ParserError::expected_found("while".to_string(), "if".to_string());
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap_err(), cmp);
     }
 
@@ -1249,7 +1321,7 @@ mod test_while {
 
         let cmp = ParserError::expected_found("new line".to_string(), "2".to_string());
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap_err(), cmp);
     }
 }
@@ -1290,7 +1362,7 @@ mod test_for {
             ))],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
     }
 
@@ -1331,7 +1403,7 @@ mod test_for {
             ))],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
     }
 }
@@ -1359,7 +1431,7 @@ mod test_function_definition {
             None,
             Vec::new(),
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1390,7 +1462,7 @@ mod test_function_definition {
             None,
             Vec::new(),
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1473,7 +1545,7 @@ mod test_function_definition {
             None,
             Vec::new(),
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1509,7 +1581,7 @@ mod test_function_definition {
             ))],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1542,7 +1614,7 @@ mod test_function_definition {
             Some(Type::Integer),
             Vec::new(),
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1573,7 +1645,7 @@ mod test_function_definition {
             ))],
         ));
 
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1616,7 +1688,7 @@ mod test_function_definition {
                 )),
             ))],
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1643,7 +1715,7 @@ mod test_struct_definition {
             tokens[1].clone(),
             HashMap::new(),
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1671,7 +1743,7 @@ mod test_struct_definition {
             tokens[1].clone(),
             hashmap!["field_a".to_string() ; Type::Integer],
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1719,7 +1791,7 @@ mod test_struct_definition {
                 "field_d".to_string() ; Type::Float
             ],
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1758,7 +1830,7 @@ mod test_struct_definition {
                 "field_b".to_string() ; Type::Struct {name: "string".to_string(), module: "std".to_string() }
             ],
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1799,7 +1871,7 @@ mod test_struct_definition {
 
         let cmp =
             ParserError::field_already_defined_for_struct("field_b".to_string(), tokens[1].clone());
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap_err(), cmp);
     }
@@ -1821,7 +1893,7 @@ mod test_preprocessor_command {
             tokens[1].clone(),
             PreProcessorCommand::BeginModuleCommand(tokens[2].clone()),
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1841,7 +1913,7 @@ mod test_preprocessor_command {
             tokens[1].clone(),
             PreProcessorCommand::ImportCommand(tokens[4].clone(), vec![tokens[2].clone()]),
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1866,7 +1938,7 @@ mod test_preprocessor_command {
                 vec![tokens[2].clone(), tokens[4].clone()],
             ),
         ));
-        let mut parser = new_default_parser(tokens);
+        let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
     }
@@ -1899,13 +1971,13 @@ mod test_sample_program {
             (TokenType::IdentifierToken, "int"),
             (TokenType::NewLineToken, "\n"),
             // New variable "a" set to 5
-            (TokenType::DollarToken, "$"),
+            (TokenType::HashToken, "#"),
             (TokenType::IdentifierToken, "a"),
             (TokenType::LeftArrowToken, "<-"), // 18
             (TokenType::IntegerLiteralToken, "5"),
             (TokenType::NewLineToken, "\n"),
             // New variable "b" set to 12
-            (TokenType::DollarToken, "$"),
+            (TokenType::HashToken, "#"),
             (TokenType::IdentifierToken, "b"),
             (TokenType::LeftArrowToken, "<-"), // 23
             (TokenType::IntegerLiteralToken, "12"),
@@ -1987,7 +2059,7 @@ mod test_sample_program {
             ],
         )));
 
-        let parser = new_default_parser(tokens);
+        let parser = Parser::new(tokens);
 
         assert_eq!(parser.parse().unwrap(), cmp);
     }
@@ -1998,8 +2070,8 @@ mod test_sample_program {
         %import double from math\n\
         \n\
         func main -> int\n\
-            $a <- 5\n\
-            $b <- 12\n\
+            #a <- 5\n\
+            #b <- 12\n\
             @double($a + $b)\n\
         end(func)\n\
         ";
@@ -2065,7 +2137,7 @@ mod test_sample_program {
             ],
         )));
 
-        let parser = new_default_parser(tokens);
+        let parser = Parser::new(tokens);
 
         assert_eq!(parser.parse().unwrap(), cmp);
     }
@@ -2114,6 +2186,6 @@ fn test_block() {
         ))],
     ));
 
-    let mut parser = new_default_parser(tokens);
+    let mut parser = Parser::new(tokens);
     assert_eq!(parser.parse_statement().unwrap(), cmp);
 }

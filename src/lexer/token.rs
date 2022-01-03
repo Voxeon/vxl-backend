@@ -26,10 +26,11 @@ pub enum TokenType {
     OrToken,
     IdentifierToken,
     DollarToken,
+    HashToken,
     AtToken,
     PlusToken,
     MinusToken,
-    BackslashToken,
+    ForwardSlashToken,
     StarToken,
     PercentToken,
     FunctionToken,
@@ -140,7 +141,7 @@ impl fmt::Display for TokenType {
             TokenType::AtToken => "@",
             TokenType::PlusToken => "+",
             TokenType::MinusToken => "-",
-            TokenType::BackslashToken => "\\",
+            TokenType::ForwardSlashToken => "/",
             TokenType::StarToken => "*",
             TokenType::PercentToken => "%",
             TokenType::FunctionToken => "func",
@@ -167,6 +168,7 @@ impl fmt::Display for TokenType {
             TokenType::CommaToken => ",",
             TokenType::NewLineToken => "new line",
             TokenType::ReturnToken => "return",
+            TokenType::HashToken => "#",
         };
 
         return write!(f, "{}", s);

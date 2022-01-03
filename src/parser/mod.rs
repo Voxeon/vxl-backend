@@ -234,7 +234,7 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> ParserResult<Statement> {
-        if self.matches(TokenType::DollarToken) {
+        if self.matches(TokenType::HashToken) {
             return self.parse_variable_declaration();
         }
 
@@ -242,7 +242,7 @@ impl Parser {
     }
 
     fn parse_variable_declaration(&mut self) -> ParserResult<Statement> {
-        let symbol = self.consume_token_one([TokenType::DollarToken])?;
+        let symbol = self.consume_token_one([TokenType::HashToken])?;
         let name = self.consume_token_one([TokenType::IdentifierToken])?;
         self.consume_token_one([TokenType::LeftArrowToken])?;
 
@@ -489,8 +489,9 @@ impl Parser {
     fn parse_factor(&mut self) -> ParserResult<Expression> {
         let mut lhs = self.parse_unary()?;
 
-        while self.matches_one([TokenType::StarToken, TokenType::BackslashToken]) {
-            let tok = self.consume_token_one([TokenType::StarToken, TokenType::BackslashToken])?;
+        while self.matches_one([TokenType::StarToken, TokenType::ForwardSlashToken]) {
+            let tok =
+                self.consume_token_one([TokenType::StarToken, TokenType::ForwardSlashToken])?;
             let rhs = self.parse_unary()?;
 
             lhs = new_expression(ExpressionNode::binary_expression(lhs, tok, rhs));
@@ -502,12 +503,28 @@ impl Parser {
     fn parse_unary(&mut self) -> ParserResult<Expression> {
         if self.matches_one([TokenType::NotToken, TokenType::MinusToken]) {
             let tok = self.consume_token_one([TokenType::NotToken, TokenType::MinusToken])?;
-            let rhs = self.parse_variable()?;
+            let rhs = self.parse_array_index()?;
 
             return Ok(new_expression(ExpressionNode::unary_expression(tok, rhs)));
         }
 
-        return self.parse_variable();
+        return self.parse_array_index();
+    }
+
+    fn parse_array_index(&mut self) -> ParserResult<Expression> {
+        let mut expr = self.parse_variable()?;
+
+        if self.matches(TokenType::OpenSquareBraceToken) {
+            let open_brace = self.consume_token_one([TokenType::OpenSquareBraceToken])?;
+            let index_expr = self.parse_expression()?;
+            self.consume_token_one([TokenType::CloseSquareBraceToken])?;
+
+            expr = new_expression(ExpressionNode::array_index_expression(
+                open_brace, expr, index_expr,
+            ));
+        }
+
+        return Ok(expr);
     }
 
     fn parse_variable(&mut self) -> ParserResult<Expression> {

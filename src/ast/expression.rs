@@ -15,6 +15,11 @@ struct_enum_with_functional_inits! {
             array_type : ArrayLiteral,
             count : Expression
         }
+        ArrayIndexExpression {
+            open_brace_token: Token,
+            array_expression: Expression,
+            index_expression: Expression
+        }
         LiteralExpression {
             value: Value
         }
@@ -66,6 +71,6 @@ pub(crate) fn new_expression(node: ExpressionNode) -> Expression {
 
 impl ExpressionNode {
     pub fn is_assignable_expression(&self) -> bool {
-        return self.is_variable_expression();
+        return self.is_variable_expression() || self.is_array_index_expression();
     }
 }
