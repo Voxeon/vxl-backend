@@ -3,8 +3,8 @@ use super::*;
 use std::collections::VecDeque;
 
 use crate::ast::{new_statement, StatementNode, AST};
-use crate::lexer::token::Token;
 use crate::pre_processor::{PreProcessor, PreProcessorCommand};
+use crate::Token;
 use crate::ROOT_MODULE_NAME;
 
 #[test]
@@ -27,7 +27,7 @@ fn test_basic_main_function() {
     let main_function_stmt = new_statement(StatementNode::function_statement(
         Token::new_identifier("func".to_string(), 2, 1, None),
         Token::new_identifier("main".to_string(), 0, 0, None),
-        HashMap::new(),
+        Vec::new(),
         None,
         Vec::new(),
     ));
@@ -64,7 +64,10 @@ fn test_integer_main_function() {
     let main_function_stmt = new_statement(StatementNode::function_statement(
         Token::new_identifier("func".to_string(), 2, 1, None),
         Token::new_identifier("main".to_string(), 0, 0, None),
-        hashmap![ "a".to_string() ; Type::Integer ],
+        vec![(
+            Token::new_identifier("a".to_string(), 0, 0, None),
+            Type::Integer,
+        )],
         Some(Type::Integer),
         Vec::new(),
     ));
@@ -101,7 +104,13 @@ fn test_undefined_struct_function_arg() {
     let main_function_stmt = new_statement(StatementNode::function_statement(
         Token::new_identifier("func".to_string(), 2, 1, None),
         Token::new_identifier("main".to_string(), 0, 0, None),
-        hashmap![ "a".to_string() ; Type::Struct {name: String::from("name"), module: String::from("root")} ],
+        vec![(
+            Token::new_identifier("a".to_string(), 0, 0, None),
+            Type::Struct {
+                name: String::from("name"),
+                module: String::from("root"),
+            },
+        )],
         Some(Type::Integer),
         Vec::new(),
     ));
@@ -145,7 +154,7 @@ fn test_undefined_struct_function_return_type() {
     let main_function_stmt = new_statement(StatementNode::function_statement(
         Token::new_identifier("func".to_string(), 2, 1, None),
         Token::new_identifier("main".to_string(), 0, 0, None),
-        HashMap::new(),
+        Vec::new(),
         Some(Type::Struct {
             name: String::from("name"),
             module: String::from("root"),

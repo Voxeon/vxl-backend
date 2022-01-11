@@ -1,9 +1,7 @@
-pub mod token;
-
 use std::convert::TryInto;
 
 use crate::error::{LexerError, LexerErrorType};
-use token::*;
+use crate::{Token, TokenType};
 
 #[derive(Debug)]
 pub struct Lexer {
@@ -397,15 +395,15 @@ impl Lexer {
 
                 let chars = self.consume_characters::<10>();
                 if chars[0] != '{' {
-                    panic!();
+                    todo!();
                 } else if chars[9] != '}' {
-                    panic!();
+                    todo!();
                 } else {
                     let characters = chars[1..=8].try_into().unwrap();
                     Self::hex_to_unicode_char(characters, line, col, &self.file)?
                 }
             }
-            Some(_) | None => panic!(),
+            Some(_) | None => todo!(),
         });
     }
 

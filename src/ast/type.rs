@@ -51,6 +51,14 @@ impl Type {
         }
     }
 
+    pub fn nested_array_type(&self) -> Option<&Type> {
+        if let Self::Array(tp) = self {
+            return Some(tp);
+        } else {
+            return None;
+        }
+    }
+
     generate_is_variants!(Boolean, Integer, Float, Character, (Array), { Struct });
 }
 

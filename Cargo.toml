@@ -11,17 +11,16 @@ all-backends = ["xvl-backend", "vxlasm-backend"]
 xvl-backend = ["vxl-iset"]
 vxlasm-backend = ["vxl-iset", "vxlasm"]
 
-all-std_libraries = ["unix-std_library", "voxeon_os-std_library"]
+all-std_libraries = ["unix-std_library", "voxeon_os-std_library", "windows-std_library"]
 unix-std_library = []
 voxeon_os-std_library = []
+windows-std_library = []
 
 [dependencies]
-sha2 = "0.10"
 hex = "0.4"
-rand = "0.8"
 paste = "1.0"
 vxl-iset = { git = "https://github.com/Voxeon/vxl-iset.git", branch = "main", optional = true }
-vxlasm = { git = "https://github.com/Voxeon/vxlasm.git", branch = "main", optional = true }
+vxlasm = { git = "https://github.com/Voxeon/vxlasm.git", branch = "main", features = [], optional = true }
 
 [dev-dependencies]
 criterion = "0.3"

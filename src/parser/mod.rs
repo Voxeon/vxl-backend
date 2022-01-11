@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::ast::*;
 use crate::error::ParserError;
-use crate::lexer::token::{Token, TokenType};
 use crate::pre_processor::PreProcessorCommand;
+use crate::{Token, TokenType};
 
 #[derive(Debug)]
 pub struct Parser {
@@ -115,16 +115,29 @@ impl Parser {
     fn parse_function_declaration(&mut self) -> ParserResult<Statement> {
         let keyword = self.consume_token_one([TokenType::FunctionToken])?;
         let name = self.consume_token_one([TokenType::IdentifierToken])?;
-        let mut args = HashMap::new();
+        let mut args = Vec::new();
         let mut return_type = None;
 
         if self.matches(TokenType::OpenRoundBraceToken) {
             self.consume_token_one([TokenType::OpenRoundBraceToken])?;
 
+            let mut arg_names = HashSet::new();
+
             if !self.matches(TokenType::CloseRoundBraceToken) {
                 loop {
-                    let (name, tp) = self.parse_field()?;
-                    args.insert(name, tp);
+                    let arg_name = self.consume_token_one([TokenType::IdentifierToken])?;
+
+                    self.consume_token_one([TokenType::OpenRoundBraceToken])?;
+                    let tp = self.parse_type()?;
+                    self.consume_token_one([TokenType::CloseRoundBraceToken])?;
+
+                    // Check for duplicate arguments in a function declaration
+                    if arg_names.contains(arg_name.lexeme()) {
+                        return Err(ParserError::duplicate_function_argument(name, arg_name));
+                    } else {
+                        arg_names.insert(arg_name.lexeme().clone());
+                        args.push((arg_name, tp));
+                    }
 
                     if !self.matches(TokenType::CommaToken) {
                         break;
@@ -514,7 +527,7 @@ impl Parser {
     fn parse_array_index(&mut self) -> ParserResult<Expression> {
         let mut expr = self.parse_variable()?;
 
-        if self.matches(TokenType::OpenSquareBraceToken) {
+        while self.matches(TokenType::OpenSquareBraceToken) {
             let open_brace = self.consume_token_one([TokenType::OpenSquareBraceToken])?;
             let index_expr = self.parse_expression()?;
             self.consume_token_one([TokenType::CloseSquareBraceToken])?;
@@ -620,10 +633,12 @@ impl Parser {
                 None
             };
 
-            let mut arguments = Vec::new();
+            let mut arguments = HashMap::new();
 
             while !self.matches(TokenType::PipeToken) {
-                arguments.push(self.parse_expression()?);
+                let argument_name = self.consume_token_one([TokenType::IdentifierToken])?;
+                self.consume_token_one([TokenType::ColonToken])?;
+                arguments.insert(argument_name, self.parse_expression()?);
 
                 if !self.matches(TokenType::PipeToken) {
                     self.consume_token_one([TokenType::CommaToken])?;

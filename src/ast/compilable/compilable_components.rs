@@ -14,6 +14,7 @@ pub struct CompilableProgram {
 #[derive(Debug, PartialEq, Clone)]
 pub struct CompilableFunction {
     pub(crate) label: String,
+    pub(crate) arguments: Vec<(String, Type)>,
     pub(crate) return_type: Option<Type>,
     pub(crate) body: CompilableBlock,
 }
@@ -33,12 +34,24 @@ pub struct CompilableBlockNode {
     pub(crate) body: Vec<CompilableStatement>,
 }
 
+impl CompilableProgram {
+    pub fn new(functions: Vec<CompilableFunction>, structs: Vec<CompilableStruct>) -> Self {
+        return Self { functions, structs };
+    }
+}
+
 impl CompilableFunction {
-    pub fn new(label: String, return_type: Option<Type>, body: CompilableBlock) -> Self {
+    pub fn new(
+        label: String,
+        arguments: Vec<(String, Type)>,
+        return_type: Option<Type>,
+        body: CompilableBlock,
+    ) -> Self {
         return Self {
             label,
             return_type,
             body,
+            arguments,
         };
     }
 }

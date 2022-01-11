@@ -1,7 +1,7 @@
 use super::PreProcessorCommand;
 use crate::ast::{Statement, StatementNode, Type, AST};
 use crate::error::PreProcessorError;
-use crate::lexer::token::Token;
+use crate::Token;
 use crate::ROOT_MODULE_NAME;
 
 use std::collections::{HashMap, VecDeque};
@@ -41,7 +41,7 @@ pub struct PreProcessor {
 impl PreProcessor {
     pub fn new(trees: VecDeque<AST>) -> Self {
         if trees.is_empty() {
-            panic!("Atleast one tree is required.");
+            internal_error!("Atleast one tree is required.");
         }
 
         return Self {
@@ -126,7 +126,7 @@ impl PreProcessor {
         } else if stmt.borrow().is_struct_statement() {
             return self.define_struct(stmt);
         } else {
-            panic!("Unexpected top level statement.");
+            internal_error!("Unexpected top level statement.");
         }
     }
 
@@ -189,7 +189,7 @@ impl PreProcessor {
         {
             self.get_current_module_name(keyword)?.lexeme().clone()
         } else {
-            panic!("Expected function definition statement.");
+            internal_error!("Expected function definition statement.");
         };
 
         if let Some(funcs) = self.functions.get_mut(&module) {
@@ -230,7 +230,7 @@ impl PreProcessor {
                 );
             }
         } else {
-            panic!("Expected struct definition statement.");
+            internal_error!("Expected struct definition statement.");
         }
 
         return Ok(());
@@ -241,7 +241,7 @@ impl PreProcessor {
 mod tests {
     use super::*;
     use crate::ast::{new_statement, StatementNode};
-    use crate::lexer::token::Token;
+    use crate::Token;
 
     #[test]
     fn test_single_function() {
@@ -263,7 +263,7 @@ mod tests {
         let main_function_stmt = new_statement(StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("main".to_string(), 0, 0, None),
-            HashMap::new(),
+            Vec::new(),
             None,
             Vec::new(),
         ));
@@ -393,7 +393,7 @@ mod tests {
         let main_function_stmt = new_statement(StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("main".to_string(), 0, 0, None),
-            HashMap::new(),
+            Vec::new(),
             None,
             Vec::new(),
         ));
@@ -447,7 +447,7 @@ mod tests {
         let main_function_stmt = new_statement(StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("main".to_string(), 0, 0, None),
-            HashMap::new(),
+            Vec::new(),
             None,
             Vec::new(),
         ));
@@ -477,7 +477,7 @@ mod tests {
         let second_function_stmt = new_statement(StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("second".to_string(), 0, 0, None),
-            HashMap::new(),
+            Vec::new(),
             None,
             Vec::new(),
         ));

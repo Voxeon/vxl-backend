@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::ast::{Type, Value, Variable};
@@ -34,6 +35,11 @@ struct_enum_with_functional_inits! {
             tp: Type
         }
         MultiplyBinaryExpression {
+            lhs: CompilableExpression,
+            rhs: CompilableExpression,
+            tp: Type
+        }
+        DivideBinaryExpression {
             lhs: CompilableExpression,
             rhs: CompilableExpression,
             tp: Type
@@ -79,7 +85,11 @@ struct_enum_with_functional_inits! {
         VariableExpression {
             variable: Variable
         }
-        AssignmentExpression {
+        VariableAssignmentExpression {
+            lhs: Variable,
+            rhs: CompilableExpression
+        }
+        ArrayIndexAssignmentExpression {
             lhs: CompilableExpression,
             rhs: CompilableExpression
         }
@@ -88,14 +98,18 @@ struct_enum_with_functional_inits! {
             tp: Option<Type>
         }
         CallExpression {
-            module: Option<String>,
             name: String,
-            arguments: Vec<CompilableExpression>
+            arguments: Vec<CompilableExpression>,
+            resulting_type: Option<Type>
         }
         ConstructorCallExpression {
             target_struct: String,
-            module: Option<String>,
-            arguments: Vec<CompilableExpression>
+            arguments: HashMap<String, CompilableExpression>
+        }
+        ArrayIndexExpression {
+            array_expression: CompilableExpression,
+            index_expression: CompilableExpression,
+            tp: Type
         }
     }
 }

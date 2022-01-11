@@ -797,7 +797,7 @@ mod test_constructor_call {
         let cmp = new_expression(ExpressionNode::constructor_call_expression(
             tokens[1].clone(),
             None,
-            Vec::new(),
+            HashMap::new(),
         ));
 
         let mut parser = Parser::new(tokens);
@@ -809,8 +809,12 @@ mod test_constructor_call {
         let tokens = new_tokens([
             (TokenType::PipeToken, "|"),
             (TokenType::IdentifierToken, "container"),
+            (TokenType::IdentifierToken, "a"),
+            (TokenType::ColonToken, ":"),
             (TokenType::IntegerLiteralToken, "52"),
             (TokenType::CommaToken, ","),
+            (TokenType::IdentifierToken, "b"),
+            (TokenType::ColonToken, ":"),
             (TokenType::IntegerLiteralToken, "53"),
             (TokenType::PipeToken, "|"),
         ]);
@@ -818,9 +822,9 @@ mod test_constructor_call {
         let cmp = new_expression(ExpressionNode::constructor_call_expression(
             tokens[1].clone(),
             None,
-            vec![
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(53))),
+            hashmap![
+                    tokens[2].clone() ; new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
+                    tokens[6].clone() ; new_expression(ExpressionNode::literal_expression(Value::Integer(53)))
             ],
         ));
 
@@ -836,8 +840,12 @@ mod test_constructor_call {
             (TokenType::LessThanToken, "<"),
             (TokenType::IdentifierToken, "std_conts"),
             (TokenType::GreaterThanToken, ">"),
+            (TokenType::IdentifierToken, "a"),
+            (TokenType::ColonToken, ":"),
             (TokenType::IntegerLiteralToken, "52"),
             (TokenType::CommaToken, ","),
+            (TokenType::IdentifierToken, "b"),
+            (TokenType::ColonToken, ":"),
             (TokenType::IntegerLiteralToken, "53"),
             (TokenType::PipeToken, "|"),
         ]);
@@ -845,9 +853,10 @@ mod test_constructor_call {
         let cmp = new_expression(ExpressionNode::constructor_call_expression(
             tokens[1].clone(),
             Some(tokens[3].clone()),
-            vec![
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(53))),
+            hashmap![
+                    tokens[5].clone() ; new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
+                    tokens[9].clone() ; new_expression(ExpressionNode::literal_expression(Value::Integer(53)))
+
             ],
         ));
 
@@ -993,6 +1002,79 @@ mod test_array_index {
                 variable,
             )),
             new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
+        ));
+
+        let mut parser = Parser::new(tokens);
+        assert_eq!(parser.parse_expression().unwrap(), cmp);
+    }
+
+    #[test]
+    fn test_array_index_double() {
+        let tokens = new_tokens([
+            (TokenType::DollarToken, "$"),
+            (TokenType::IdentifierToken, "a"),
+            (TokenType::OpenSquareBraceToken, "["),
+            (TokenType::IntegerLiteralToken, "0"),
+            (TokenType::CloseSquareBraceToken, "]"),
+            (TokenType::OpenSquareBraceToken, "["),
+            (TokenType::IntegerLiteralToken, "52"),
+            (TokenType::CloseSquareBraceToken, "]"),
+        ]);
+
+        let mut variable = Variable::new();
+        variable.push(tokens[1].clone());
+
+        let cmp = new_expression(ExpressionNode::array_index_expression(
+            tokens[5].clone(),
+            new_expression(ExpressionNode::array_index_expression(
+                tokens[2].clone(),
+                new_expression(ExpressionNode::variable_expression(
+                    tokens[0].clone(),
+                    variable,
+                )),
+                new_expression(ExpressionNode::literal_expression(Value::Integer(0))),
+            )),
+            new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
+        ));
+
+        let mut parser = Parser::new(tokens);
+        assert_eq!(parser.parse_expression().unwrap(), cmp);
+    }
+
+    #[test]
+    fn test_array_index_array_index() {
+        let tokens = new_tokens([
+            (TokenType::DollarToken, "$"),
+            (TokenType::IdentifierToken, "a"),
+            (TokenType::OpenSquareBraceToken, "["),
+            (TokenType::DollarToken, "$"),
+            (TokenType::IdentifierToken, "b"),
+            (TokenType::OpenSquareBraceToken, "["), // 5
+            (TokenType::IntegerLiteralToken, "0"),
+            (TokenType::CloseSquareBraceToken, "]"),
+            (TokenType::CloseSquareBraceToken, "]"),
+        ]);
+
+        let mut variable_a = Variable::new();
+        variable_a.push(tokens[1].clone());
+
+        let mut variable_b = Variable::new();
+        variable_b.push(tokens[4].clone());
+
+        let cmp = new_expression(ExpressionNode::array_index_expression(
+            tokens[2].clone(),
+            new_expression(ExpressionNode::variable_expression(
+                tokens[0].clone(),
+                variable_a,
+            )),
+            new_expression(ExpressionNode::array_index_expression(
+                tokens[5].clone(),
+                new_expression(ExpressionNode::variable_expression(
+                    tokens[3].clone(),
+                    variable_b,
+                )),
+                new_expression(ExpressionNode::literal_expression(Value::Integer(0))),
+            )),
         ));
 
         let mut parser = Parser::new(tokens);
@@ -1427,7 +1509,7 @@ mod test_function_definition {
         let cmp = new_statement(StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
-            HashMap::new(),
+            Vec::new(),
             None,
             Vec::new(),
         ));
@@ -1442,7 +1524,7 @@ mod test_function_definition {
             (TokenType::FunctionToken, "func"),
             (TokenType::IdentifierToken, "function"),
             (TokenType::OpenRoundBraceToken, "("),
-            (TokenType::IdentifierToken, "a"),
+            (TokenType::IdentifierToken, "a"), // 3
             (TokenType::OpenRoundBraceToken, "("),
             (TokenType::IdentifierToken, "integer"),
             (TokenType::CloseRoundBraceToken, ")"),
@@ -1458,7 +1540,7 @@ mod test_function_definition {
         let cmp = new_statement(StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
-            hashmap! [ "a".to_string() ; Type::Integer ],
+            vec![(tokens[3].clone(), Type::Integer)],
             None,
             Vec::new(),
         ));
@@ -1473,34 +1555,34 @@ mod test_function_definition {
             (TokenType::FunctionToken, "func"),
             (TokenType::IdentifierToken, "function"),
             (TokenType::OpenRoundBraceToken, "("),
-            (TokenType::IdentifierToken, "a"),
+            (TokenType::IdentifierToken, "a"), // 3
             (TokenType::OpenRoundBraceToken, "("),
             (TokenType::IdentifierToken, "integer"),
             (TokenType::CloseRoundBraceToken, ")"),
             (TokenType::CommaToken, ","),
-            (TokenType::IdentifierToken, "b"),
+            (TokenType::IdentifierToken, "b"), // 8
             (TokenType::OpenRoundBraceToken, "("),
             (TokenType::IdentifierToken, "char"),
             (TokenType::CloseRoundBraceToken, ")"),
             (TokenType::CommaToken, ","),
-            (TokenType::IdentifierToken, "c"),
+            (TokenType::IdentifierToken, "c"), // 13
             (TokenType::OpenRoundBraceToken, "("),
             (TokenType::IdentifierToken, "bool"),
             (TokenType::CloseRoundBraceToken, ")"),
             (TokenType::CommaToken, ","),
-            (TokenType::IdentifierToken, "d"),
+            (TokenType::IdentifierToken, "d"), // 18
             (TokenType::OpenRoundBraceToken, "("),
             (TokenType::IdentifierToken, "float"),
             (TokenType::CloseRoundBraceToken, ")"),
             (TokenType::CommaToken, ","),
-            (TokenType::IdentifierToken, "e"),
+            (TokenType::IdentifierToken, "e"), // 23
             (TokenType::OpenRoundBraceToken, "("),
             (TokenType::OpenSquareBraceToken, "["),
             (TokenType::IdentifierToken, "integer"),
             (TokenType::CloseSquareBraceToken, "]"),
             (TokenType::CloseRoundBraceToken, ")"),
             (TokenType::CommaToken, ","),
-            (TokenType::IdentifierToken, "f"),
+            (TokenType::IdentifierToken, "f"), // 28
             (TokenType::OpenRoundBraceToken, "("),
             (TokenType::OpenSquareBraceToken, "["),
             (TokenType::OpenSquareBraceToken, "["),
@@ -1509,7 +1591,7 @@ mod test_function_definition {
             (TokenType::CloseSquareBraceToken, "]"),
             (TokenType::CloseRoundBraceToken, ")"),
             (TokenType::CommaToken, ","),
-            (TokenType::IdentifierToken, "g"),
+            (TokenType::IdentifierToken, "g"), // 37
             (TokenType::OpenRoundBraceToken, "("),
             (TokenType::OpenSquareBraceToken, "["),
             (TokenType::OpenSquareBraceToken, "["),
@@ -1531,16 +1613,22 @@ mod test_function_definition {
         let cmp = new_statement(StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
-            hashmap![
-                "a".to_string() ; Type::Integer,
-                "b".to_string() ; Type::Character,
-                "c".to_string() ; Type::Boolean,
-                "d".to_string() ; Type::Float,
-                "e".to_string() ; Type::Array(Box::new(Type::Integer)),
-                "f".to_string() ; Type::Array(Box::new(Type::Array(Box::new(Type::Integer)))),
-                "g".to_string() ; Type::Array(Box::new(Type::Array(Box::new(Type::Array(Box::new(
-                    Type::Integer,
-                ))))))
+            vec![
+                (tokens[3].clone(), Type::Integer),
+                (tokens[8].clone(), Type::Character),
+                (tokens[13].clone(), Type::Boolean),
+                (tokens[18].clone(), Type::Float),
+                (tokens[23].clone(), Type::Array(Box::new(Type::Integer))),
+                (
+                    tokens[30].clone(),
+                    Type::Array(Box::new(Type::Array(Box::new(Type::Integer)))),
+                ),
+                (
+                    tokens[39].clone(),
+                    Type::Array(Box::new(Type::Array(Box::new(Type::Array(Box::new(
+                        Type::Integer,
+                    )))))),
+                ),
             ],
             None,
             Vec::new(),
@@ -1571,7 +1659,7 @@ mod test_function_definition {
         let cmp = new_statement(StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
-            HashMap::new(),
+            Vec::new(),
             Some(Type::Integer),
             vec![new_statement(StatementNode::return_statement(
                 tokens[5].clone(),
@@ -1610,7 +1698,7 @@ mod test_function_definition {
         let cmp = new_statement(StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
-            hashmap!["a".to_string() ; Type::Integer],
+            vec![(tokens[3].clone(), Type::Integer)],
             Some(Type::Integer),
             Vec::new(),
         ));
@@ -1637,7 +1725,7 @@ mod test_function_definition {
         let cmp = new_statement(StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
-            HashMap::new(),
+            Vec::new(),
             None,
             vec![new_statement(StatementNode::return_statement(
                 tokens[3].clone(),
@@ -1678,7 +1766,7 @@ mod test_function_definition {
         let cmp = new_statement(StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
-            hashmap!["a".to_string() ; Type::Integer],
+            vec![(tokens[3].clone(), Type::Integer)],
             Some(Type::Integer),
             vec![new_statement(StatementNode::expression_statement(
                 new_expression(ExpressionNode::binary_expression(
@@ -2025,7 +2113,7 @@ mod test_sample_program {
         cmp.push_statement(new_statement(StatementNode::function_statement(
             tokens[11].clone(),
             tokens[12].clone(),
-            HashMap::new(),
+            Vec::new(),
             Some(Type::Integer),
             vec![
                 new_statement(StatementNode::variable_declaration_statement(
@@ -2103,7 +2191,7 @@ mod test_sample_program {
         cmp.push_statement(new_statement(StatementNode::function_statement(
             tokens[11].clone(),
             tokens[12].clone(),
-            HashMap::new(),
+            Vec::new(),
             Some(Type::Integer),
             vec![
                 new_statement(StatementNode::variable_declaration_statement(

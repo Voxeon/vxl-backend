@@ -1,6 +1,6 @@
 use super::{Expression, Type};
-use crate::lexer::token::Token;
 use crate::pre_processor::PreProcessorCommand;
+use crate::Token;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -49,7 +49,7 @@ struct_enum_with_functional_inits! {
         FunctionStatement {
             keyword: Token,
             name: Token,
-            arguments: HashMap<String, Type>,
+            arguments: Vec<(Token, Type)>,
             return_type: Option<Type>,
             body: Vec<Statement>
         }
@@ -75,7 +75,7 @@ impl StatementNode {
     pub fn borrow_preprocessor_command(&self) -> &PreProcessorCommand {
         return match self {
             StatementNode::PreProcessorCommandStatement { symbol: _, command } => command,
-            _ => panic!("Not a pre processor command statement"),
+            _ => internal_error!("Not a pre processor command statement"),
         };
     }
 
@@ -89,7 +89,7 @@ impl StatementNode {
                 return_type: _,
                 body: _,
             } => name,
-            _ => panic!("Not a function definition statement"),
+            _ => internal_error!("Not a function definition statement"),
         };
     }
 }

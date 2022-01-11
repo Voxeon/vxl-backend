@@ -1,4 +1,4 @@
-use crate::lexer::token::Token;
+use crate::Token;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PreProcessorCommand {

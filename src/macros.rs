@@ -84,6 +84,13 @@ macro_rules! with_wrapper {
     };
 }
 
+/// Wrapper for panic.
+macro_rules! internal_error {
+    ($msg:expr) => {
+        panic!("Internal Compiler Panic: {}", $msg)
+    };
+}
+
 // Used in testing
 #[allow(unused_macros)]
 macro_rules! hashmap {

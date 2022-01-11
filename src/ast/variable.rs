@@ -1,4 +1,4 @@
-use crate::lexer::token::Token;
+use crate::Token;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Variable {
@@ -12,6 +12,10 @@ impl Variable {
 
     pub fn push(&mut self, token: Token) {
         self.path.push(token);
+    }
+
+    pub fn path(&self) -> &Vec<Token> {
+        return &self.path;
     }
 }
 

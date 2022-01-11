@@ -1,7 +1,8 @@
 use super::value::{ArrayLiteral, Value};
 use super::Variable;
-use crate::lexer::token::Token;
+use crate::Token;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 pub type Expression = Rc<RefCell<ExpressionNode>>;
@@ -59,7 +60,7 @@ struct_enum_with_functional_inits! {
         ConstructorCallExpression {
             target_struct: Token,
             module: Option<Token>,
-            arguments: Vec<Expression>
+            arguments: HashMap<Token, Expression>
         }
     }
 }

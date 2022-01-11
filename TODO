@@ -8,3 +8,5 @@
 * Check where variable types are enforced - Require variable types be defined at instantiation
 * Check where function calls are properly enforced
 * Check where 
+
+-- Change imports to importing entire modules

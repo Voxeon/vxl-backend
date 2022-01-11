@@ -46,16 +46,6 @@ struct_enum_with_functional_inits! {
         Block {
             block: CompilableBlock
         }
-        // FunctionStatement {
-        //     name: String,
-        //     arguments: HashMap<String, Type>,
-        //     return_type: Option<Type>,
-        //     body: Vec<CompilableStatement>
-        // }
-        // StructStatement {
-        //     name: String,
-        //     fields: HashMap<String, Type>
-        // }
     }
 }
 

@@ -2,60 +2,49 @@ use std::collections::{HashMap, HashSet};
 
 use crate::ast::compilable::{
     CompilableBlock, CompilableBlockNode, CompilableExpression, CompilableExpressionNode,
-    CompilableFunction, CompilableStatement, CompilableStatementNode, CompilableStruct,
+    CompilableFunction, CompilableProgram, CompilableStatement, CompilableStatementNode,
+    CompilableStruct,
 };
-use crate::ast::{Expression, ExpressionNode, Statement, StatementNode, Type};
+use crate::ast::{Expression, ExpressionNode, Statement, StatementNode, Type, Variable};
 use crate::error::ResolverError;
-use crate::lexer::token::{Token, TokenType};
 use crate::pre_processor::{ObjectName, ProcessedModule, StructDefinition};
 use crate::ROOT_MODULE_NAME;
+use crate::{Token, TokenType};
 
 type ResolverResult<T> = Result<T, ResolverError>;
 
 /// Performs type checking and importing of the standard library.
 pub struct Resolver {
     modules: HashMap<String, ProcessedModule>,
-    processed_modules: HashMap<String, ProcessedModule>,
-    type_checking: bool,
-    name_checking: bool,
-    definition_checking: bool,
+    functions: Vec<CompilableFunction>,
+    structs: Vec<CompilableStruct>,
+    current_module: String,
     include_std_library: bool,
 }
-
-#[derive(Clone, Copy, Debug, Hash, PartialEq)]
-pub struct Resolution;
 
 impl Resolver {
     pub fn new() -> Self {
         return Self {
             modules: HashMap::new(),
-            processed_modules: HashMap::new(),
-            type_checking: false,
-            name_checking: false,
-            definition_checking: false,
             include_std_library: false,
+            functions: Vec::new(),
+            structs: Vec::new(),
+            current_module: String::new(),
         };
     }
 
     with_wrapper!(with_modules, modules, HashMap<String, ProcessedModule>);
-    with_wrapper!(with_type_checking, type_checking, bool);
-    with_wrapper!(with_name_checking, name_checking, bool);
-    with_wrapper!(with_definition_checking, definition_checking, bool);
     with_wrapper!(with_standard_library, include_std_library, bool);
 
-    pub fn run(mut self) -> ResolverResult<Resolution> {
+    pub fn run(mut self) -> ResolverResult<CompilableProgram> {
         if self.include_std_library {
             self.import_std_library_modules();
         }
 
-        if self.name_checking || self.type_checking || self.definition_checking {
-            return self.run_resolution();
-        } else {
-            return Ok(self.merge());
-        }
+        return self.run_resolution();
     }
 
-    fn run_resolution(mut self) -> ResolverResult<Resolution> {
+    fn run_resolution(mut self) -> ResolverResult<CompilableProgram> {
         if self.modules.contains_key(ROOT_MODULE_NAME) {
             self.process_module(ROOT_MODULE_NAME.to_string())?;
 
@@ -65,32 +54,33 @@ impl Resolver {
         }
     }
 
-    fn merge(mut self) -> Resolution {
-        todo!();
+    fn merge(self) -> CompilableProgram {
+        return CompilableProgram::new(self.functions, self.structs);
     }
 
     fn process_module(&mut self, module_name: String) -> ResolverResult<()> {
-        if let Some(module) = self.modules.remove(&module_name) {
-            // Check high level imports
-            let imports = self.import_check(&module)?;
-
-            // Check every variable reference and function call types and names
-            self.depth_resolution(&module, &imports)?;
-
-            self.processed_modules
-                .insert(module_name.to_string(), module);
-
-            for import in imports {
-                self.process_module(import)?;
-            }
-        } else {
+        if !self.modules.contains_key(&module_name) {
             panic!();
         }
 
-        todo!();
+        self.current_module = module_name;
+
+        // Check high level imports
+        let imports = self.import_check()?;
+
+        // Check every variable reference and function call types and names
+        self.depth_resolution(&imports)?;
+
+        for import in imports {
+            self.process_module(import)?;
+        }
+
+        return Ok(());
     }
 
-    fn import_check(&mut self, module: &ProcessedModule) -> ResolverResult<HashSet<String>> {
+    fn import_check(&mut self) -> ResolverResult<HashSet<String>> {
+        let module = self.modules.get(&self.current_module).unwrap();
+
         fn handle_module_found(
             missing_modules_errors: &mut Vec<ResolverError>,
             required_modules: &mut HashSet<String>,
@@ -123,15 +113,6 @@ impl Resolver {
                     import,
                     referenced_module,
                 );
-            } else if let Some(referenced_module) =
-                self.processed_modules.get(import.module.lexeme())
-            {
-                handle_module_found(
-                    &mut missing_modules_errors,
-                    &mut required_modules,
-                    import,
-                    referenced_module,
-                );
             } else {
                 missing_modules_errors
                     .push(ResolverError::no_module_defined(import.module.clone()));
@@ -145,11 +126,9 @@ impl Resolver {
         todo!();
     }
 
-    fn depth_resolution(
-        &mut self,
-        module: &ProcessedModule,
-        imports: &HashSet<String>,
-    ) -> ResolverResult<()> {
+    fn depth_resolution(&mut self, imports: &HashSet<String>) -> ResolverResult<()> {
+        let module = self.modules.get(&self.current_module).unwrap();
+
         let mut structs = Vec::new();
         let mut functions = Vec::new();
 
@@ -176,7 +155,10 @@ impl Resolver {
                     Some(imports),
                 )?);
             } else {
-                panic!("Internal Error: Unexpected statement in the \"{}\" module. Function name: \"{}\"", module.name, f_name);
+                internal_error!(format!(
+                    "Unexpected statement in the \"{}\" module. Function name: \"{}\"",
+                    module.name, f_name
+                ));
             }
         }
 
@@ -210,7 +192,7 @@ impl Resolver {
     fn check_function(
         &self,
         function_name: &Token,
-        function_arguments: &HashMap<String, Type>,
+        function_arguments: &Vec<(Token, Type)>,
         return_type: &Option<Type>,
         body: &Vec<Statement>,
         current_module: &ProcessedModule,
@@ -232,7 +214,11 @@ impl Resolver {
         }
 
         return Ok(CompilableFunction::new(
-            function_name.lexeme().clone(),
+            Self::encode_fn_name(function_name.lexeme(), &current_module.name),
+            function_arguments
+                .into_iter()
+                .map(|(name, tp)| (name.lexeme().clone(), tp.clone()))
+                .collect(),
             return_type.clone(),
             self.check_block(
                 function_name,
@@ -294,7 +280,13 @@ impl Resolver {
         return match &*statement.borrow() {
             StatementNode::ExpressionStatement { expr } => {
                 return self
-                    .check_expression(current_module, function_reference_token, imports, expr)
+                    .check_expression(
+                        current_module,
+                        current_block,
+                        function_reference_token,
+                        imports,
+                        expr,
+                    )
                     .map(|(expr, expression_type)| {
                         CompilableStatementNode::expression_statement(expr, expression_type)
                             .wrapped()
@@ -311,6 +303,7 @@ impl Resolver {
                     if let Some(return_type) = return_type {
                         let (expr, expression_type) = self.check_expression(
                             current_module,
+                            current_block,
                             function_reference_token,
                             imports,
                             return_value,
@@ -349,6 +342,7 @@ impl Resolver {
             } => {
                 let (compiled_initializer, expr_tp) = self.check_expression(
                     current_module,
+                    current_block,
                     function_reference_token,
                     imports,
                     initializer,
@@ -396,6 +390,7 @@ impl Resolver {
             } => {
                 let (cond, cond_tp) = self.check_expression(
                     current_module,
+                    current_block,
                     function_reference_token,
                     imports,
                     condition,
@@ -430,6 +425,7 @@ impl Resolver {
             } => {
                 let (start_expr, start_tp) = self.check_expression(
                     current_module,
+                    current_block,
                     function_reference_token,
                     imports,
                     start,
@@ -442,8 +438,13 @@ impl Resolver {
                     ));
                 }
 
-                let (stop_expr, stop_tp) =
-                    self.check_expression(current_module, function_reference_token, imports, stop)?;
+                let (stop_expr, stop_tp) = self.check_expression(
+                    current_module,
+                    current_block,
+                    function_reference_token,
+                    imports,
+                    stop,
+                )?;
 
                 if stop_tp.is_none() || !stop_tp.as_ref().unwrap().is_integer() {
                     return Err(ResolverError::invalid_stop_for_loop_type(
@@ -452,8 +453,13 @@ impl Resolver {
                     ));
                 }
 
-                let (step_expr, step_tp) =
-                    self.check_expression(current_module, function_reference_token, imports, step)?;
+                let (step_expr, step_tp) = self.check_expression(
+                    current_module,
+                    current_block,
+                    function_reference_token,
+                    imports,
+                    step,
+                )?;
 
                 if step_tp.is_none() || !step_tp.as_ref().unwrap().is_integer() {
                     return Err(ResolverError::invalid_step_for_loop_type(
@@ -497,6 +503,7 @@ impl Resolver {
             } => {
                 let (cond, cond_tp) = self.check_expression(
                     current_module,
+                    current_block,
                     function_reference_token,
                     imports,
                     condition,
@@ -556,10 +563,10 @@ impl Resolver {
                 ))
             }
             StatementNode::PreProcessorCommandStatement { symbol, command: _ } => {
-                panic!(
+                internal_error!(format!(
                     "Unexpected pre-processor command statement in the resolver. Symbol: {:?}",
                     symbol
-                );
+                ));
             }
         };
     }
@@ -567,6 +574,7 @@ impl Resolver {
     fn check_expression(
         &self,
         current_module: &ProcessedModule,
+        current_block: &CompilableBlock,
         function_reference_token: &Token,
         imports: Option<&HashSet<String>>,
         expression: &Expression,
@@ -588,6 +596,7 @@ impl Resolver {
 
                 let (count_expr, count_tp) = self.check_expression(
                     current_module,
+                    current_block,
                     function_reference_token,
                     imports,
                     count,
@@ -615,17 +624,346 @@ impl Resolver {
                 CompilableExpressionNode::literal_expression(value.clone()).wrapped(),
                 Some(value.get_type()),
             ),
-            ExpressionNode::UnaryExpression { operator, rhs } => todo!(),
-            ExpressionNode::BinaryExpression { lhs, operator, rhs } => todo!(),
-            ExpressionNode::LogicalExpression { lhs, operator, rhs } => todo!(),
-            ExpressionNode::VariableExpression { keyword, variable } => todo!(),
-            ExpressionNode::AssignmentExpression { lhs, operator, rhs } => todo!(),
+            ExpressionNode::UnaryExpression { operator, rhs } => match operator.token_type() {
+                TokenType::NotToken => {
+                    let (rhs_expr, rhs_tp) = self.check_expression(
+                        current_module,
+                        current_block,
+                        function_reference_token,
+                        imports,
+                        rhs,
+                    )?;
+
+                    if rhs_tp != Some(Type::Boolean) {
+                        return Err(ResolverError::invalid_unary_not_type(
+                            operator.clone(),
+                            rhs_tp,
+                        ));
+                    }
+
+                    (
+                        CompilableExpressionNode::not_unary_expression(rhs_expr).wrapped(),
+                        Some(Type::Boolean),
+                    )
+                }
+                TokenType::MinusToken => {
+                    let (rhs_expr, rhs_tp) = self.check_expression(
+                        current_module,
+                        current_block,
+                        function_reference_token,
+                        imports,
+                        rhs,
+                    )?;
+
+                    if rhs_tp != Some(Type::Float) && rhs_tp != Some(Type::Integer) {
+                        return Err(ResolverError::invalid_unary_negate_type(
+                            operator.clone(),
+                            rhs_tp,
+                        ));
+                    }
+
+                    (
+                        CompilableExpressionNode::negate_unary_expression(rhs_expr).wrapped(),
+                        rhs_tp,
+                    )
+                }
+                _ => internal_error!(format!("Unexpected unary expression operator {}", operator)),
+            },
+            ExpressionNode::BinaryExpression { lhs, operator, rhs } => {
+                let (lhs_expr, lhs_tp) = self.check_expression(
+                    current_module,
+                    current_block,
+                    function_reference_token,
+                    imports,
+                    lhs,
+                )?;
+
+                let (rhs_expr, rhs_tp) = self.check_expression(
+                    current_module,
+                    current_block,
+                    function_reference_token,
+                    imports,
+                    rhs,
+                )?;
+
+                if lhs_tp != rhs_tp {
+                    return Err(ResolverError::lhs_does_not_match_rhs_binary_expression(
+                        lhs_tp,
+                        operator.clone(),
+                        rhs_tp,
+                    ));
+                }
+
+                match operator.token_type() {
+                    TokenType::PlusToken
+                    | TokenType::MinusToken
+                    | TokenType::StarToken
+                    | TokenType::ForwardSlashToken => {
+                        // We only need to check lhs since we previously established boths sides are identical
+                        if lhs_tp != Some(Type::Integer) && lhs_tp != Some(Type::Float) {
+                            return Err(
+                                ResolverError::expected_numeric_values_for_binary_expression(
+                                    lhs_tp,
+                                    operator.clone(),
+                                ),
+                            );
+                        }
+
+                        let tp = lhs_tp.unwrap();
+
+                        match operator.token_type() {
+                            TokenType::PlusToken => (
+                                CompilableExpressionNode::add_binary_expression(
+                                    lhs_expr,
+                                    rhs_expr,
+                                    tp.clone(),
+                                )
+                                .wrapped(),
+                                Some(tp),
+                            ),
+                            TokenType::MinusToken => (
+                                CompilableExpressionNode::subtract_binary_expression(
+                                    lhs_expr,
+                                    rhs_expr,
+                                    tp.clone(),
+                                )
+                                .wrapped(),
+                                Some(tp),
+                            ),
+                            TokenType::StarToken => (
+                                CompilableExpressionNode::multiply_binary_expression(
+                                    lhs_expr,
+                                    rhs_expr,
+                                    tp.clone(),
+                                )
+                                .wrapped(),
+                                Some(tp),
+                            ),
+                            TokenType::ForwardSlashToken => (
+                                CompilableExpressionNode::divide_binary_expression(
+                                    lhs_expr,
+                                    rhs_expr,
+                                    tp.clone(),
+                                )
+                                .wrapped(),
+                                Some(tp),
+                            ),
+                            _ => internal_error!(format!(
+                                "Unexpected operator for a binary expression: {}",
+                                operator
+                            )),
+                        }
+                    }
+                    TokenType::GreaterThanToken
+                    | TokenType::GreaterThanEqualToken
+                    | TokenType::LessThanToken
+                    | TokenType::LessThanEqualToken => {
+                        // We only need to check lhs since we previously established boths sides are identical
+                        if lhs_tp != Some(Type::Integer) && lhs_tp != Some(Type::Float) {
+                            return Err(
+                                ResolverError::expected_numeric_values_for_binary_expression(
+                                    lhs_tp,
+                                    operator.clone(),
+                                ),
+                            );
+                        }
+
+                        let tp = lhs_tp.unwrap();
+
+                        match operator.token_type() {
+                            TokenType::GreaterThanToken => (
+                                CompilableExpressionNode::greater_binary_expression(
+                                    lhs_expr, rhs_expr, tp,
+                                )
+                                .wrapped(),
+                                Some(Type::Boolean),
+                            ),
+                            TokenType::GreaterThanEqualToken => (
+                                CompilableExpressionNode::greater_equal_binary_expression(
+                                    lhs_expr, rhs_expr, tp,
+                                )
+                                .wrapped(),
+                                Some(Type::Boolean),
+                            ),
+                            TokenType::LessThanToken => (
+                                CompilableExpressionNode::less_binary_expression(
+                                    lhs_expr, rhs_expr, tp,
+                                )
+                                .wrapped(),
+                                Some(Type::Boolean),
+                            ),
+                            TokenType::LessThanEqualToken => (
+                                CompilableExpressionNode::less_equal_binary_expression(
+                                    lhs_expr, rhs_expr, tp,
+                                )
+                                .wrapped(),
+                                Some(Type::Boolean),
+                            ),
+                            _ => internal_error!(format!(
+                                "Unexpected operator for a binary expression: {}",
+                                operator
+                            )),
+                        }
+                    }
+                    TokenType::EqualsToken => (
+                        CompilableExpressionNode::equal_to_binary_expression(
+                            lhs_expr,
+                            rhs_expr,
+                            lhs_tp.unwrap(),
+                        )
+                        .wrapped(),
+                        Some(Type::Boolean),
+                    ),
+                    TokenType::BangEqualsToken => (
+                        CompilableExpressionNode::not_equal_to_binary_expression(
+                            lhs_expr,
+                            rhs_expr,
+                            lhs_tp.unwrap(),
+                        )
+                        .wrapped(),
+                        Some(Type::Boolean),
+                    ),
+                    _ => internal_error!(format!(
+                        "Unexpected operator for a binary expression: {}",
+                        operator
+                    )),
+                }
+            }
+            ExpressionNode::LogicalExpression { lhs, operator, rhs } => {
+                let (lhs_expr, lhs_tp) = self.check_expression(
+                    current_module,
+                    current_block,
+                    function_reference_token,
+                    imports,
+                    lhs,
+                )?;
+
+                let (rhs_expr, rhs_tp) = self.check_expression(
+                    current_module,
+                    current_block,
+                    function_reference_token,
+                    imports,
+                    rhs,
+                )?;
+
+                if lhs_tp != Some(Type::Boolean) {
+                    return Err(ResolverError::logical_expression_left_non_boolean(
+                        operator.clone(),
+                        lhs_tp.clone(),
+                    ));
+                }
+
+                if rhs_tp != Some(Type::Boolean) {
+                    return Err(ResolverError::logical_expression_right_non_boolean(
+                        operator.clone(),
+                        rhs_tp.clone(),
+                    ));
+                }
+
+                let expr = match operator.token_type() {
+                    TokenType::AndToken => {
+                        CompilableExpressionNode::and_logical_expression(lhs_expr, rhs_expr)
+                            .wrapped()
+                    }
+                    TokenType::OrToken => {
+                        CompilableExpressionNode::or_logical_expression(lhs_expr, rhs_expr)
+                            .wrapped()
+                    }
+                    _ => internal_error!(format!(
+                        "Unexpected token in logical expression {}",
+                        operator
+                    )),
+                };
+
+                (expr, Some(Type::Boolean))
+            }
+            ExpressionNode::VariableExpression {
+                keyword: _,
+                variable,
+            } => {
+                let tp = self.check_variable(
+                    variable,
+                    current_block,
+                    function_reference_token,
+                    imports,
+                )?;
+
+                (
+                    CompilableExpressionNode::variable_expression(variable.clone()).wrapped(),
+                    Some(tp),
+                )
+            }
+            ExpressionNode::AssignmentExpression { lhs, operator, rhs } => {
+                let (lhs_expr, lhs_tp) = self.check_expression(
+                    current_module,
+                    current_block,
+                    function_reference_token,
+                    imports,
+                    lhs,
+                )?;
+
+                let (rhs_expr, rhs_tp) = self.check_expression(
+                    current_module,
+                    current_block,
+                    function_reference_token,
+                    imports,
+                    rhs,
+                )?;
+
+                let res;
+
+                if lhs_expr.borrow().is_array_index_expression() {
+                    if rhs_tp.is_none() || lhs_tp != rhs_tp {
+                        return Err(ResolverError::invalid_assignment_type(
+                            operator.clone(),
+                            lhs_tp,
+                            rhs_tp,
+                        ));
+                    }
+
+                    res = (
+                        CompilableExpressionNode::array_index_assignment_expression(
+                            lhs_expr, rhs_expr,
+                        )
+                        .wrapped(),
+                        None,
+                    );
+                } else if let CompilableExpressionNode::VariableExpression { variable } =
+                    &*lhs_expr.borrow()
+                {
+                    if rhs_tp.is_none() || lhs_tp != rhs_tp {
+                        return Err(ResolverError::invalid_assignment_type(
+                            operator.clone(),
+                            lhs_tp,
+                            rhs_tp,
+                        ));
+                    }
+
+                    let variable = variable.clone();
+
+                    res = (
+                        CompilableExpressionNode::variable_assignment_expression(
+                            variable, rhs_expr,
+                        )
+                        .wrapped(),
+                        None,
+                    );
+                } else {
+                    internal_error!(format!(
+                        "Unexpected expression type for assignment.\n{:?}",
+                        lhs_expr
+                    ));
+                }
+
+                res
+            }
             ExpressionNode::GroupingExpression {
                 reference_token: _,
                 expression,
             } => {
                 let (expr, tp) = self.check_expression(
                     current_module,
+                    current_block,
                     function_reference_token,
                     imports,
                     expression,
@@ -637,32 +975,315 @@ impl Resolver {
                 )
             }
             ExpressionNode::CallExpression {
-                keyword,
+                keyword: _,
                 module,
                 name,
                 arguments,
-            } => todo!(),
+            } => {
+                let module_string = module
+                    .as_ref()
+                    .map(|m| m.lexeme())
+                    .unwrap_or(&self.current_module);
+
+                let encoded_function_name = Self::encode_fn_name(name.lexeme(), module_string);
+
+                let mut args = Vec::with_capacity(arguments.len());
+
+                let func;
+
+                if let Some(m) = self.modules.get(module_string) {
+                    if let Some(f) = m.functions.get(name.lexeme()) {
+                        func = f;
+                    } else {
+                        return Err(ResolverError::no_function_with_name_in_module(
+                            name.clone(),
+                            module_string.clone(),
+                        ));
+                    }
+                } else {
+                    if let Some(m) = module {
+                        return Err(ResolverError::no_module_defined_with_name_token(m.clone()));
+                    } else {
+                        return Err(ResolverError::no_module_defined_with_name(
+                            self.current_module.clone(),
+                        ));
+                    }
+                }
+
+                let resulting_type;
+
+                if let StatementNode::FunctionStatement {
+                    keyword: _,
+                    name: _,
+                    arguments: defined_arguments,
+                    return_type: defined_return_tp,
+                    body: _,
+                } = &*func.borrow()
+                {
+                    if arguments.len() != defined_arguments.len() {
+                        return Err(ResolverError::arguments_count_does_not_match_definition(
+                            defined_arguments.len(),
+                            arguments.len(),
+                            name.clone(),
+                        ));
+                    }
+
+                    for (i, arg) in arguments.iter().enumerate() {
+                        let (arg_expr, arg_tp) = self.check_expression(
+                            current_module,
+                            current_block,
+                            function_reference_token,
+                            imports,
+                            arg,
+                        )?;
+
+                        if arg_tp.is_none() || &defined_arguments[i].1 != arg_tp.as_ref().unwrap() {
+                            return Err(ResolverError::invalid_function_call_argument(
+                                i,
+                                defined_arguments[i].1.clone(),
+                                arg_tp,
+                                name.clone(),
+                            ));
+                        }
+
+                        args.push(arg_expr);
+                    }
+
+                    resulting_type = defined_return_tp.clone();
+                } else {
+                    internal_error!(format!(
+                        "Unexpected non-function statement. Statement: {:?}",
+                        func
+                    ));
+                }
+
+                (
+                    CompilableExpressionNode::call_expression(
+                        encoded_function_name,
+                        args,
+                        resulting_type.clone(),
+                    )
+                    .wrapped(),
+                    resulting_type,
+                )
+            }
             ExpressionNode::ConstructorCallExpression {
                 target_struct,
                 module,
                 arguments,
-            } => todo!(),
+            } => {
+                let module_string = module
+                    .as_ref()
+                    .map(|m| m.lexeme())
+                    .unwrap_or(&self.current_module);
+
+                let encoded_struct_name =
+                    Self::encode_struct_name(target_struct.lexeme(), module_string);
+
+                let strct;
+
+                if let Some(m) = self.modules.get(module_string) {
+                    if let Some(s) = m.structs.get(target_struct.lexeme()) {
+                        strct = s;
+                    } else {
+                        return Err(ResolverError::no_struct_with_name_in_module(
+                            target_struct.clone(),
+                            module_string.clone(),
+                        ));
+                    }
+                } else {
+                    if let Some(m) = module {
+                        return Err(ResolverError::no_module_defined_with_name_token(m.clone()));
+                    } else {
+                        return Err(ResolverError::no_module_defined_with_name(
+                            self.current_module.clone(),
+                        ));
+                    }
+                }
+
+                let mut args = HashMap::new();
+
+                if strct.fields.len() != arguments.len() {
+                    return Err(
+                        ResolverError::struct_values_count_does_not_match_definition(
+                            strct.fields.len(),
+                            arguments.len(),
+                            target_struct.clone(),
+                        ),
+                    );
+                }
+
+                for (field_name, value) in arguments {
+                    if let Some(field_tp) = strct.fields.get(field_name.lexeme()) {
+                        let (value_expr, arg_tp) = self.check_expression(
+                            current_module,
+                            current_block,
+                            function_reference_token,
+                            imports,
+                            value,
+                        )?;
+
+                        if arg_tp.is_none() || field_tp != arg_tp.as_ref().unwrap() {
+                            return Err(ResolverError::invalid_constructor_call_argument(
+                                field_name.clone(),
+                                field_tp.clone(),
+                                arg_tp,
+                            ));
+                        }
+
+                        args.insert(field_name.lexeme().clone(), value_expr);
+                    } else {
+                        return Err(ResolverError::no_field_with_name_on_struct(
+                            field_name.clone(),
+                            target_struct.lexeme().clone(),
+                        ));
+                    }
+                }
+
+                (
+                    CompilableExpressionNode::constructor_call_expression(
+                        encoded_struct_name,
+                        args,
+                    )
+                    .wrapped(),
+                    Some(Type::Struct {
+                        name: target_struct.lexeme().clone(),
+                        module: module_string.clone(),
+                    }),
+                )
+            }
             ExpressionNode::ArrayIndexExpression {
                 open_brace_token,
                 array_expression,
                 index_expression,
-            } => todo!(),
+            } => {
+                let (array_expr, array_tp) = self.check_expression(
+                    current_module,
+                    current_block,
+                    function_reference_token,
+                    imports,
+                    array_expression,
+                )?;
+
+                let (index_expr, index_tp) = self.check_expression(
+                    current_module,
+                    current_block,
+                    function_reference_token,
+                    imports,
+                    index_expression,
+                )?;
+
+                if array_tp.is_none() || !array_tp.as_ref().unwrap().is_array() {
+                    return Err(ResolverError::invalid_array_index_array_type(
+                        open_brace_token.clone(),
+                        array_tp,
+                    ));
+                }
+
+                if index_tp != Some(Type::Integer) {
+                    return Err(ResolverError::invalid_array_index_index_type(
+                        open_brace_token.clone(),
+                        array_tp,
+                    ));
+                }
+
+                let tp = array_tp.unwrap().nested_array_type().unwrap().clone();
+
+                (
+                    CompilableExpressionNode::array_index_expression(
+                        array_expr,
+                        index_expr,
+                        tp.clone(),
+                    )
+                    .wrapped(),
+                    Some(tp),
+                )
+            }
         });
     }
 
-    fn lookup_module(&self, name: &str) -> Option<&ProcessedModule> {
-        let mut m = self.processed_modules.get(name);
+    fn get_field(
+        &self,
+        reference_token: &Token,
+        root_tp: &Type,
+        field: &String,
+        imports: Option<&HashSet<String>>,
+    ) -> ResolverResult<&Type> {
+        match root_tp {
+            Type::Boolean | Type::Integer | Type::Float | Type::Character | Type::Array(_) => {
+                return Err(ResolverError::variable_type_does_not_have_field(
+                    reference_token.clone(),
+                    Some(root_tp.clone()),
+                    field.clone(),
+                ));
+            }
+            Type::Struct { name, module } => {
+                if imports.is_none() || !imports.unwrap().contains(module) {
+                    return Err(ResolverError::module_not_imported(
+                        module.clone(),
+                        self.current_module.clone(),
+                    ));
+                }
 
-        if m.is_none() {
-            m = self.modules.get(name);
+                if let Some(m) = self.modules.get(module) {
+                    if let Some(strct) = m.structs.get(name) {
+                        if let Some(field_tp) = strct.fields.get(field) {
+                            return Ok(field_tp);
+                        } else {
+                            return Err(ResolverError::variable_type_does_not_have_field(
+                                reference_token.clone(),
+                                Some(root_tp.clone()),
+                                field.clone(),
+                            ));
+                        }
+                    } else {
+                        return Err(ResolverError::no_object_defined_with_name_in_module(
+                            name.clone(),
+                            module.clone(),
+                        ));
+                    }
+                } else {
+                    return Err(ResolverError::no_module_defined_with_name(module.clone()));
+                }
+            }
+        }
+    }
+
+    fn check_variable(
+        &self,
+        var: &Variable,
+        current_block: &CompilableBlock,
+        function_reference_token: &Token,
+        imports: Option<&HashSet<String>>,
+    ) -> ResolverResult<Type> {
+        if var.path().is_empty() {
+            internal_error!(format!(
+                "Variable cannot be checked when empty. {}",
+                function_reference_token
+            ));
         }
 
-        return m;
+        let root_struct_tp = if let Some(var_tp) = current_block
+            .borrow()
+            .variable_list
+            .get(var.path()[0].lexeme())
+        {
+            var_tp.clone()
+        } else {
+            return Err(ResolverError::no_variable_declared_with_name_in_scope(
+                function_reference_token.clone(),
+            ));
+        };
+
+        let mut current_field_tp = &root_struct_tp;
+
+        for i in 1..var.path().len() {
+            let field = &var.path()[i];
+
+            current_field_tp = self.get_field(field, &current_field_tp, field.lexeme(), imports)?;
+        }
+
+        return Ok(current_field_tp.clone());
     }
 
     fn check_type(
@@ -697,7 +1318,7 @@ impl Resolver {
                     if module == &current_module.name {
                         current_module
                     } else {
-                        self.lookup_module(module).unwrap()
+                        self.modules.get(module).unwrap()
                     }
                 };
 
@@ -766,11 +1387,10 @@ impl Default for Resolver {
     fn default() -> Self {
         return Self {
             modules: HashMap::new(),
-            processed_modules: HashMap::new(),
-            type_checking: true,
-            name_checking: true,
-            definition_checking: true,
             include_std_library: true,
+            functions: Vec::new(),
+            structs: Vec::new(),
+            current_module: String::new(),
         };
     }
 }
