@@ -1,32 +1,13 @@
 use super::PreProcessorCommand;
-use crate::ast::{Statement, StatementNode, Type, AST};
+use crate::ast::{Statement, StatementNode, AST};
 use crate::error::PreProcessorError;
+use crate::processed_module::{ObjectName, PreProcessedModule, ProcessedModule, StructDefinition};
 use crate::Token;
 use crate::ROOT_MODULE_NAME;
 
 use std::collections::{HashMap, VecDeque};
 
 type PreProcessorResult<T> = Result<T, PreProcessorError>;
-
-#[derive(Clone, Debug, PartialEq, Hash, Eq)]
-pub struct ObjectName {
-    pub(crate) module: Token,
-    pub(crate) name: Token,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StructDefinition {
-    pub(crate) name: String,
-    pub(crate) fields: HashMap<String, Type>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct ProcessedModule {
-    pub(crate) name: String,
-    pub(crate) imports: Vec<ObjectName>,
-    pub(crate) functions: HashMap<String, Statement>,
-    pub(crate) structs: HashMap<String, StructDefinition>,
-}
 
 #[derive(Clone, Debug)]
 pub struct PreProcessor {
@@ -63,9 +44,6 @@ impl PreProcessor {
                             symbol: _,
                             command: PreProcessorCommand::BeginModuleCommand(module_name),
                         } => {
-                            // if let PreProcessorCommand::BeginModuleCommand(module_name) = cmd {
-
-                            // }
                             if module_name.lexeme() != ROOT_MODULE_NAME {
                                 return Err(PreProcessorError::NoRootModuleDefined);
                             } else {
@@ -91,22 +69,22 @@ impl PreProcessor {
             let mut functions = HashMap::new();
 
             for s in self.structs.remove(module.lexeme()).unwrap_or(Vec::new()) {
-                structs.insert(s.name.clone(), s);
+                structs.insert(s.name().clone(), s);
             }
 
             for (name, func) in self.functions.remove(module.lexeme()).unwrap_or(Vec::new()) {
                 functions.insert(name, func);
             }
 
-            output.insert(
+            let m: ProcessedModule = PreProcessedModule::new(
                 module.lexeme().clone(),
-                ProcessedModule {
-                    name: module.lexeme().clone(),
-                    imports: self.imports.remove(module.lexeme()).unwrap_or(Vec::new()),
-                    functions,
-                    structs,
-                },
-            );
+                self.imports.remove(module.lexeme()).unwrap_or(Vec::new()),
+                functions,
+                structs,
+            )
+            .into();
+
+            output.insert(module.lexeme().clone(), m);
         }
 
         return Ok(output);
@@ -152,19 +130,13 @@ impl PreProcessor {
                     .get_mut(self.current_module_name.as_ref().unwrap().lexeme())
                 {
                     for item in items {
-                        imports.push(ObjectName {
-                            module: module_name.clone(),
-                            name: item.clone(),
-                        });
+                        imports.push(ObjectName::new(module_name.clone(), item.clone()));
                     }
                 } else {
                     let mut imports = Vec::new();
 
                     for item in items {
-                        imports.push(ObjectName {
-                            module: module_name.clone(),
-                            name: item.clone(),
-                        });
+                        imports.push(ObjectName::new(module_name.clone(), item.clone()));
                     }
 
                     self.imports.insert(
@@ -216,17 +188,11 @@ impl PreProcessor {
             let name_string = name.lexeme().clone();
 
             if let Some(structs) = self.structs.get_mut(&module) {
-                structs.push(StructDefinition {
-                    name: name_string,
-                    fields: fields.clone(),
-                });
+                structs.push(StructDefinition::new(name_string, fields.clone()));
             } else {
                 self.structs.insert(
                     module,
-                    vec![StructDefinition {
-                        name: name_string,
-                        fields: fields.clone(),
-                    }],
+                    vec![StructDefinition::new(name_string, fields.clone())],
                 );
             }
         } else {
@@ -274,14 +240,24 @@ mod tests {
 
         let processor = PreProcessor::new(input);
 
+        let comp: Vec<(String, PreProcessedModule)> = processor
+            .process()
+            .unwrap()
+            .into_iter()
+            .map(|(s, m)| (s, m.unwrap_pre_processed()))
+            .collect();
+
         assert_eq!(
-            processor.process().unwrap(),
-            hashmap![ROOT_MODULE_NAME.to_string() ; ProcessedModule {
-                name: ROOT_MODULE_NAME.to_string(),
-                imports: Vec::new(),
-                functions: hashmap!["main".to_string() ; main_function_stmt],
-                structs: HashMap::new(),
-            }]
+            comp,
+            vec![(
+                ROOT_MODULE_NAME.to_string(),
+                PreProcessedModule::new(
+                    ROOT_MODULE_NAME.to_string(),
+                    Vec::new(),
+                    hashmap!["main".to_string() ; main_function_stmt],
+                    HashMap::new(),
+                )
+            )]
         );
     }
 
@@ -314,17 +290,27 @@ mod tests {
 
         let processor = PreProcessor::new(input);
 
+        let comp: Vec<(String, PreProcessedModule)> = processor
+            .process()
+            .unwrap()
+            .into_iter()
+            .map(|(s, m)| (s, m.unwrap_pre_processed()))
+            .collect();
+
         assert_eq!(
-            processor.process().unwrap(),
-            hashmap![ROOT_MODULE_NAME.to_string() ; ProcessedModule {
-                name: ROOT_MODULE_NAME.to_string(),
-                imports: Vec::new(),
-                functions: HashMap::new(),
-                structs: hashmap!["my_struct".to_string() ; StructDefinition {
-                    name: "my_struct".to_string(),
-                    fields: HashMap::new(),
-                }],
-            }]
+            comp,
+            vec![(
+                ROOT_MODULE_NAME.to_string(),
+                PreProcessedModule::new(
+                    ROOT_MODULE_NAME.to_string(),
+                    Vec::new(),
+                    HashMap::new(),
+                    hashmap!["my_struct".to_string() ; StructDefinition::new(
+                                 "my_struct".to_string(),
+                                 HashMap::new(),
+                    )],
+                )
+            )]
         );
     }
 
@@ -358,18 +344,24 @@ mod tests {
         input.push_front(root_ast);
 
         let processor = PreProcessor::new(input);
+        let comp: Vec<(String, PreProcessedModule)> = processor
+            .process()
+            .unwrap()
+            .into_iter()
+            .map(|(s, m)| (s, m.unwrap_pre_processed()))
+            .collect();
 
         assert_eq!(
-            processor.process().unwrap(),
-            hashmap![ROOT_MODULE_NAME.to_string() ; ProcessedModule {
-                name: ROOT_MODULE_NAME.to_string(),
-                imports: vec![ObjectName {
-                    module: module,
-                    name: import_a,
-                }],
-                functions: HashMap::new(),
-                structs: HashMap::new(),
-            }]
+            comp,
+            vec![(
+                ROOT_MODULE_NAME.to_string(),
+                PreProcessedModule::new(
+                    ROOT_MODULE_NAME.to_string(),
+                    vec![ObjectName::new(module, import_a,)],
+                    HashMap::new(),
+                    HashMap::new(),
+                )
+            )]
         );
     }
 
@@ -412,17 +404,27 @@ mod tests {
 
         let processor = PreProcessor::new(input);
 
+        let comp: Vec<(String, PreProcessedModule)> = processor
+            .process()
+            .unwrap()
+            .into_iter()
+            .map(|(s, m)| (s, m.unwrap_pre_processed()))
+            .collect();
+
         assert_eq!(
-            processor.process().unwrap(),
-            hashmap![ROOT_MODULE_NAME.to_string() ; ProcessedModule {
-                name: ROOT_MODULE_NAME.to_string(),
-                imports: Vec::new(),
-                functions: hashmap!["main".to_string() ; main_function_stmt],
-                structs: hashmap!["my_struct".to_string() ; StructDefinition {
-                    name: "my_struct".to_string(),
-                    fields: HashMap::new(),
-                }],
-            }]
+            comp,
+            vec![(
+                ROOT_MODULE_NAME.to_string(),
+                PreProcessedModule::new(
+                    ROOT_MODULE_NAME.to_string(),
+                    Vec::new(),
+                    hashmap!["main".to_string() ; main_function_stmt],
+                    hashmap!["my_struct".to_string() ; StructDefinition::new(
+                        "my_struct".to_string(),
+                        HashMap::new(),
+                    )],
+                )
+            )]
         );
     }
 
@@ -497,25 +499,43 @@ mod tests {
 
         let processor = PreProcessor::new(input);
 
+        let mut comp: Vec<(String, PreProcessedModule)> = processor
+            .process()
+            .unwrap()
+            .into_iter()
+            .map(|(s, m)| (s, m.unwrap_pre_processed()))
+            .collect();
+
+        comp.sort_by(|a, b| a.0.cmp(&b.0));
+
         assert_eq!(
-            processor.process().unwrap(),
-            hashmap![ROOT_MODULE_NAME.to_string() ; ProcessedModule {
-                name: ROOT_MODULE_NAME.to_string(),
-                imports: Vec::new(),
-                functions: hashmap!["main".to_string() ; main_function_stmt],
-                structs: hashmap!["my_struct".to_string() ; StructDefinition {
-                    name: "my_struct".to_string(),
-                    fields: HashMap::new(),
-                }],
-            }, "second".to_string() ; ProcessedModule {
-                name: "second".to_string(),
-                imports: Vec::new(),
-                functions: hashmap!["second".to_string() ; second_function_stmt],
-                structs: hashmap!["my_second_struct".to_string() ; StructDefinition {
-                    name: "my_second_struct".to_string(),
-                    fields: HashMap::new(),
-                }],
-            }]
+            comp,
+            vec![
+                (
+                    ROOT_MODULE_NAME.to_string(),
+                    PreProcessedModule::new(
+                        ROOT_MODULE_NAME.to_string(),
+                        Vec::new(),
+                        hashmap!["main".to_string() ; main_function_stmt],
+                        hashmap!["my_struct".to_string() ; StructDefinition::new(
+                                 "my_struct".to_string(),
+                                 HashMap::new(),
+                        )],
+                    )
+                ),
+                (
+                    "second".to_string(),
+                    PreProcessedModule::new(
+                        "second".to_string(),
+                        Vec::new(),
+                        hashmap!["second".to_string() ; second_function_stmt],
+                        hashmap!["my_second_struct".to_string() ; StructDefinition::new(
+                            "my_second_struct".to_string(),
+                            HashMap::new(),
+                        )],
+                    )
+                )
+            ]
         );
     }
 }

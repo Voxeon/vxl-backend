@@ -7,7 +7,7 @@ use crate::ast::compilable::{
 };
 use crate::ast::{Expression, ExpressionNode, Statement, StatementNode, Type, Variable};
 use crate::error::ResolverError;
-use crate::pre_processor::{ObjectName, ProcessedModule, StructDefinition};
+use crate::processed_module::{ObjectName, ProcessedModule, StructDefinition};
 use crate::ROOT_MODULE_NAME;
 use crate::{Token, TokenType};
 
@@ -16,11 +16,15 @@ type ResolverResult<T> = Result<T, ResolverError>;
 /// Performs type checking and importing of the standard library.
 pub struct Resolver {
     modules: HashMap<String, ProcessedModule>,
+    used_stl_modules: Vec<String>,
     functions: Vec<CompilableFunction>,
     structs: Vec<CompilableStruct>,
     current_module: String,
     include_std_library: bool,
 }
+
+// TODO: iterate over struct field types, build up a list of structs that link to the base struct and
+// if at any point a type links to any other type in the set then we have uncovered a circular dependency
 
 impl Resolver {
     pub fn new() -> Self {
@@ -30,6 +34,7 @@ impl Resolver {
             functions: Vec::new(),
             structs: Vec::new(),
             current_module: String::new(),
+            used_stl_modules: Vec::new(),
         };
     }
 
@@ -54,13 +59,36 @@ impl Resolver {
         }
     }
 
-    fn merge(self) -> CompilableProgram {
+    fn merge(mut self) -> CompilableProgram {
+        for module_name in self.used_stl_modules {
+            if let Some(ProcessedModule::StandardLibrary(module)) = self.modules.get(&module_name) {
+                let (mut functions, mut structs) = module.take_compilable_objects();
+
+                self.functions.append(&mut functions);
+                self.structs.append(&mut structs);
+            } else {
+                internal_error!(format!(
+                    "Unexpectedly failed to locate STL module: {}",
+                    module_name
+                ));
+            }
+        }
+
         return CompilableProgram::new(self.functions, self.structs);
     }
 
     fn process_module(&mut self, module_name: String) -> ResolverResult<()> {
-        if !self.modules.contains_key(&module_name) {
-            panic!();
+        let m = self.modules.get(&module_name);
+
+        if m.is_none() {
+            internal_error!(format!("Could not locate module: {}", module_name));
+        }
+
+        if m.unwrap().is_stl_module() {
+            // STL modules are not checked. These are just included in the merge.
+            self.used_stl_modules.push(module_name);
+
+            return Ok(());
         }
 
         self.current_module = module_name;
@@ -88,15 +116,17 @@ impl Resolver {
             referenced_module: &ProcessedModule,
         ) {
             if referenced_module
-                .functions
-                .contains_key(import.name.lexeme())
-                && referenced_module.structs.contains_key(import.name.lexeme())
+                .functions()
+                .contains_key(import.name().lexeme())
+                && referenced_module
+                    .structs()
+                    .contains_key(import.name().lexeme())
             {
-                required_modules.insert(import.name.lexeme().clone());
+                required_modules.insert(import.name().lexeme().clone());
             } else {
                 missing_modules_errors.push(ResolverError::no_object_defined(
-                    import.name.clone(),
-                    import.module.clone(),
+                    import.name().clone(),
+                    import.module().clone(),
                 ));
             }
         }
@@ -105,8 +135,8 @@ impl Resolver {
         let mut required_modules = HashSet::new();
 
         // Check the imports
-        for import in &module.imports {
-            if let Some(referenced_module) = self.modules.get(import.module.lexeme()) {
+        for import in module.unwrap_imports() {
+            if let Some(referenced_module) = self.modules.get(import.module().lexeme()) {
                 handle_module_found(
                     &mut missing_modules_errors,
                     &mut required_modules,
@@ -115,7 +145,7 @@ impl Resolver {
                 );
             } else {
                 missing_modules_errors
-                    .push(ResolverError::no_module_defined(import.module.clone()));
+                    .push(ResolverError::no_module_defined(import.module().clone()));
             }
         }
 
@@ -129,15 +159,21 @@ impl Resolver {
     fn depth_resolution(&mut self, imports: &HashSet<String>) -> ResolverResult<()> {
         let module = self.modules.get(&self.current_module).unwrap();
 
-        let mut structs = Vec::new();
-        let mut functions = Vec::new();
-
-        // Check struct field types
-        for (struct_name, struct_definition) in &module.structs {
-            structs.push(self.check_struct(module, imports, struct_name, struct_definition)?)
+        if module.is_stl_module() {
+            internal_error!("Unexpected attempt to process an STL module.");
         }
 
-        for (f_name, function_statement) in &module.functions {
+        // Check struct field types
+        for (struct_name, struct_definition) in module.structs() {
+            self.structs.push(self.check_struct(
+                self.modules.get(&self.current_module).unwrap(),
+                imports,
+                struct_name,
+                struct_definition,
+            )?)
+        }
+
+        for (f_name, function_statement) in module.functions() {
             if let StatementNode::FunctionStatement {
                 keyword: _,
                 name,
@@ -146,7 +182,7 @@ impl Resolver {
                 body,
             } = &*function_statement.borrow()
             {
-                functions.push(self.check_function(
+                self.functions.push(self.check_function(
                     name,
                     arguments,
                     return_type,
@@ -157,7 +193,8 @@ impl Resolver {
             } else {
                 internal_error!(format!(
                     "Unexpected statement in the \"{}\" module. Function name: \"{}\"",
-                    module.name, f_name
+                    module.name(),
+                    f_name
                 ));
             }
         }
@@ -172,7 +209,10 @@ impl Resolver {
         struct_name: &String,
         struct_def: &StructDefinition,
     ) -> ResolverResult<CompilableStruct> {
-        for (_name, field_tp) in &struct_def.fields {
+        //  Structs to visit
+        let mut visited_structs = HashSet::new();
+
+        for (_name, field_tp) in struct_def.fields() {
             self.check_type(
                 field_tp,
                 None,
@@ -181,12 +221,86 @@ impl Resolver {
                 current_module,
                 Some(imports),
             )?;
+
+            let tp = Self::unravel_array_tp(field_tp);
+
+            match tp {
+                Type::Struct { name: _, module: _ } => {
+                    self.check_struct_field_types(&mut visited_structs, tp, struct_name)?
+                }
+                _ => (),
+            }
         }
 
         return Ok(CompilableStruct::new(
-            Self::encode_struct_name(struct_name, &current_module.name),
-            struct_def.fields.clone(),
+            Self::encode_struct_name(struct_name, &current_module.name()),
+            struct_def.fields().clone(),
         ));
+    }
+
+    fn check_struct_field_types<'a>(
+        &'a self,
+        visited_structs: &mut HashSet<&'a Type>,
+        current_struct: &'a Type,
+        root_struct_name: &String,
+    ) -> ResolverResult<()> {
+        if visited_structs.contains(current_struct) {
+            return Ok(());
+        }
+
+        match current_struct {
+            Type::Struct {
+                name: struct_name,
+                module: module_name,
+            } => {
+                let module = match self.modules.get(module_name) {
+                    Some(m) => m,
+                    None => internal_error!(format!("Unexpectedly could not locate module {} when checking for circular references", module_name)),
+                };
+
+                let strct = match module.structs().get(struct_name) {
+                    Some(s) => s,
+                    None => internal_error!(format!("Unexpectedly could not locate the struct {} in the module {} when checking for circular references", struct_name, module_name)),
+                };
+
+                for (field_name, field_tp) in strct.fields() {
+                    let tp = Self::unravel_array_tp(field_tp);
+
+                    match tp {
+                        Type::Struct { name, module } => {
+                            if module == &self.current_module && name == root_struct_name {
+                                return Err(ResolverError::recursive_reference_detected(
+                                    root_struct_name.clone(),
+                                    self.current_module.clone(),
+                                    struct_name.clone(),
+                                    module_name.clone(),
+                                    field_name.clone(),
+                                ));
+                            }
+
+                            self.check_struct_field_types(visited_structs, tp, root_struct_name)?
+                        }
+                        _ => (),
+                    }
+                }
+            }
+            _ => internal_error!(format!(
+                "Unexpectedly found type {} when checking for circular references.",
+                current_struct
+            )),
+        }
+
+        visited_structs.insert(current_struct);
+
+        return Ok(());
+    }
+
+    fn unravel_array_tp(tp: &Type) -> &Type {
+        if let Type::Array(nested) = tp {
+            return Self::unravel_array_tp(nested);
+        } else {
+            return tp;
+        }
     }
 
     fn check_function(
@@ -214,7 +328,7 @@ impl Resolver {
         }
 
         return Ok(CompilableFunction::new(
-            Self::encode_fn_name(function_name.lexeme(), &current_module.name),
+            Self::encode_fn_name(function_name.lexeme(), current_module.name()),
             function_arguments
                 .into_iter()
                 .map(|(name, tp)| (name.lexeme().clone(), tp.clone()))
@@ -992,7 +1106,7 @@ impl Resolver {
                 let func;
 
                 if let Some(m) = self.modules.get(module_string) {
-                    if let Some(f) = m.functions.get(name.lexeme()) {
+                    if let Some(f) = m.functions().get(name.lexeme()) {
                         func = f;
                     } else {
                         return Err(ResolverError::no_function_with_name_in_module(
@@ -1083,7 +1197,7 @@ impl Resolver {
                 let strct;
 
                 if let Some(m) = self.modules.get(module_string) {
-                    if let Some(s) = m.structs.get(target_struct.lexeme()) {
+                    if let Some(s) = m.structs().get(target_struct.lexeme()) {
                         strct = s;
                     } else {
                         return Err(ResolverError::no_struct_with_name_in_module(
@@ -1103,10 +1217,10 @@ impl Resolver {
 
                 let mut args = HashMap::new();
 
-                if strct.fields.len() != arguments.len() {
+                if strct.fields().len() != arguments.len() {
                     return Err(
                         ResolverError::struct_values_count_does_not_match_definition(
-                            strct.fields.len(),
+                            strct.fields().len(),
                             arguments.len(),
                             target_struct.clone(),
                         ),
@@ -1114,7 +1228,7 @@ impl Resolver {
                 }
 
                 for (field_name, value) in arguments {
-                    if let Some(field_tp) = strct.fields.get(field_name.lexeme()) {
+                    if let Some(field_tp) = strct.fields().get(field_name.lexeme()) {
                         let (value_expr, arg_tp) = self.check_expression(
                             current_module,
                             current_block,
@@ -1226,8 +1340,8 @@ impl Resolver {
                 }
 
                 if let Some(m) = self.modules.get(module) {
-                    if let Some(strct) = m.structs.get(name) {
-                        if let Some(field_tp) = strct.fields.get(field) {
+                    if let Some(strct) = m.structs().get(name) {
+                        if let Some(field_tp) = strct.fields().get(field) {
                             return Ok(field_tp);
                         } else {
                             return Err(ResolverError::variable_type_does_not_have_field(
@@ -1295,73 +1409,73 @@ impl Resolver {
         current_module: &ProcessedModule,
         imports: Option<&HashSet<String>>,
     ) -> ResolverResult<()> {
-        if let Type::Array(nested) = tp {
-            return self.check_type(
+        return match tp {
+            Type::Array(nested) => self.check_type(
                 nested,
                 reference_token,
                 current_function,
                 current_struct,
                 current_module,
                 imports,
-            );
-        } else if let Type::Struct { name, module } = tp {
-            let found_module = {
-                if let Some(imports) = imports {
-                    imports.contains(module) || module == &current_module.name
-                } else {
-                    module == &current_module.name
-                }
-            };
-
-            if found_module {
-                let m = {
-                    if module == &current_module.name {
-                        current_module
+            ),
+            Type::Struct { name, module } => {
+                let found_module = {
+                    if let Some(imports) = imports {
+                        imports.contains(module) || module == current_module.name()
                     } else {
-                        self.modules.get(module).unwrap()
+                        module == current_module.name()
                     }
                 };
 
-                if m.structs.contains_key(name) {
-                    return Ok(());
-                } else {
-                    if let Some(s) = current_struct {
-                        return Err(
-                            ResolverError::no_object_defined_with_name_in_module_in_struct(
-                                name.clone(),
-                                module.clone(),
-                                s.clone(),
-                            ),
-                        );
-                    } else if reference_token.is_some() || current_function.is_some() {
-                        let ref_token;
-
-                        if let Some(reference_token) = reference_token {
-                            ref_token = reference_token;
+                if found_module {
+                    let m = {
+                        if module == current_module.name() {
+                            current_module
                         } else {
-                            ref_token = current_function.unwrap();
+                            self.modules.get(module).unwrap()
                         }
+                    };
 
-                        return Err(
-                            ResolverError::no_object_defined_with_name_in_module_in_function(
-                                name.clone(),
-                                module.clone(),
-                                ref_token.clone(),
-                            ),
-                        );
+                    if m.structs().contains_key(name) {
+                        return Ok(());
                     } else {
-                        return Err(ResolverError::no_module_defined_with_name(module.clone()));
+                        if let Some(s) = current_struct {
+                            return Err(
+                                ResolverError::no_object_defined_with_name_in_module_in_struct(
+                                    name.clone(),
+                                    module.clone(),
+                                    s.clone(),
+                                ),
+                            );
+                        } else if reference_token.is_some() || current_function.is_some() {
+                            let ref_token;
+
+                            if let Some(reference_token) = reference_token {
+                                ref_token = reference_token;
+                            } else {
+                                ref_token = current_function.unwrap();
+                            }
+
+                            return Err(
+                                ResolverError::no_object_defined_with_name_in_module_in_function(
+                                    name.clone(),
+                                    module.clone(),
+                                    ref_token.clone(),
+                                ),
+                            );
+                        } else {
+                            return Err(ResolverError::no_module_defined_with_name(module.clone()));
+                        }
                     }
+                } else {
+                    return Err(ResolverError::module_not_imported(
+                        module.clone(),
+                        current_module.name().clone(),
+                    ));
                 }
-            } else {
-                return Err(ResolverError::module_not_imported(
-                    module.clone(),
-                    current_module.name.clone(),
-                ));
             }
-        } else {
-            return Ok(());
-        }
+            _ => Ok(()),
+        };
     }
 
     fn encode_fn_name(fn_name: &String, module_name: &String) -> String {
@@ -1391,6 +1505,7 @@ impl Default for Resolver {
             functions: Vec::new(),
             structs: Vec::new(),
             current_module: String::new(),
+            used_stl_modules: Vec::new(),
         };
     }
 }

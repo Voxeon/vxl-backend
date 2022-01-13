@@ -165,6 +165,13 @@ struct_enum_with_functional_inits! {
             tp: Option<Type>,
             operator: Token
         }
+        RecursiveReferenceDetected {
+            root_struct_name: String,
+            root_struct_module: String,
+            recursive_struct_name: String,
+            recursive_struct_module: String,
+            field_name: String
+        }
     }
 }
 
@@ -519,6 +526,9 @@ impl fmt::Display for ResolverError {
             ResolverError::ExpectedNumericValuesForBinaryExpression { tp, operator } => {
                 write!(f, "This binary expression expected values of type integer or float instead values of type '{}' were provided {}", optional_type_to_string(tp), operator)
             }
+            ResolverError::RecursiveReferenceDetected { root_struct_name, root_struct_module, recursive_struct_name, recursive_struct_module, field_name } => {
+                write!(f, "Recursive struct definition detected. The struct '{}' in the module '{}' is referenced in the field '{}' of the struct '{}' in the module '{}' which forms a circular reference.", root_struct_name, root_struct_module, field_name, recursive_struct_name, recursive_struct_module)
+            },
         };
     }
 }
