@@ -77,9 +77,7 @@ impl Parser {
             }
         };
 
-        return Ok(new_statement(
-            StatementNode::pre_processor_command_statement(identifier, cmd),
-        ));
+        return Ok(StatementNode::pre_processor_command_statement(identifier, cmd).wrapped());
     }
 
     fn parse_preprocessor_import(&mut self) -> ParserResult<PreProcessorCommand> {
@@ -161,13 +159,9 @@ impl Parser {
         let body = self.parse_block(&keyword)?;
         self.parse_end(TokenType::FunctionToken)?;
 
-        return Ok(new_statement(StatementNode::function_statement(
-            keyword,
-            name,
-            args,
-            return_type,
-            body,
-        )));
+        return Ok(
+            StatementNode::function_statement(keyword, name, args, return_type, body).wrapped(),
+        );
     }
 
     fn parse_struct_declaration(&mut self) -> ParserResult<Statement> {
@@ -191,9 +185,7 @@ impl Parser {
 
         self.parse_end(TokenType::StructToken)?;
 
-        return Ok(new_statement(StatementNode::struct_statement(
-            keyword, name, fields,
-        )));
+        return Ok(StatementNode::struct_statement(keyword, name, fields).wrapped());
     }
 
     fn parse_type(&mut self) -> ParserResult<Type> {
@@ -262,9 +254,9 @@ impl Parser {
         let initializer = self.parse_expression()?;
         self.consume_token_one([TokenType::NewLineToken])?;
 
-        return Ok(new_statement(
-            StatementNode::variable_declaration_statement(symbol, name, initializer),
-        ));
+        return Ok(
+            StatementNode::variable_declaration_statement(symbol, name, initializer).wrapped(),
+        );
     }
 
     fn parse_secondary_statement(&mut self) -> ParserResult<Statement> {
@@ -274,7 +266,7 @@ impl Parser {
             let stmts = self.parse_block(&tok)?;
             self.parse_end(TokenType::BlockToken)?;
 
-            return Ok(new_statement(StatementNode::block_statement(tok, stmts)));
+            return Ok(StatementNode::block_statement(tok, stmts).wrapped());
         }
 
         if self.matches(TokenType::IfToken) {
@@ -296,12 +288,7 @@ impl Parser {
             }
 
             self.parse_end(TokenType::IfToken)?;
-            return Ok(new_statement(StatementNode::if_statement(
-                tok,
-                cond,
-                then_branch,
-                else_branch,
-            )));
+            return Ok(StatementNode::if_statement(tok, cond, then_branch, else_branch).wrapped());
         }
 
         if self.matches(TokenType::WhileToken) {
@@ -313,9 +300,7 @@ impl Parser {
             let body = self.parse_block(&tok)?;
 
             self.parse_end(TokenType::WhileToken)?;
-            return Ok(new_statement(StatementNode::while_statement(
-                tok, cond, body,
-            )));
+            return Ok(StatementNode::while_statement(tok, cond, body).wrapped());
         }
 
         if self.matches(TokenType::ForToken) {
@@ -334,9 +319,9 @@ impl Parser {
 
             let body = self.parse_block(&tok)?;
             self.parse_end(TokenType::ForToken)?;
-            return Ok(new_statement(StatementNode::for_statement(
-                tok, iter_name, start, stop, step, body,
-            )));
+            return Ok(
+                StatementNode::for_statement(tok, iter_name, start, stop, step, body).wrapped(),
+            );
         }
 
         if self.matches(TokenType::ReturnToken) {
@@ -350,7 +335,7 @@ impl Parser {
 
             self.consume_token_one([TokenType::NewLineToken])?;
 
-            return Ok(new_statement(StatementNode::return_statement(tok, value)));
+            return Ok(StatementNode::return_statement(tok, value).wrapped());
         }
 
         return self.parse_expression_statement();
@@ -397,9 +382,7 @@ impl Parser {
         let expression = self.parse_expression()?;
         self.consume_token_one([TokenType::NewLineToken])?;
 
-        return Ok(new_statement(StatementNode::expression_statement(
-            expression,
-        )));
+        return Ok(StatementNode::expression_statement(expression).wrapped());
     }
 
     fn parse_expression(&mut self) -> ParserResult<Expression> {
@@ -414,7 +397,7 @@ impl Parser {
             let value = self.parse_assignment()?;
 
             if expr.borrow().is_assignable_expression() {
-                expr = new_expression(ExpressionNode::assignment_expression(expr, arrow, value));
+                expr = ExpressionNode::assignment_expression(expr, arrow, value).wrapped();
             } else {
                 return Err(ParserError::invalid_assignment_target(arrow));
             }
@@ -430,7 +413,7 @@ impl Parser {
             let op = self.consume_token_one([TokenType::OrToken])?;
             let rhs = self.parse_logical_or()?;
 
-            lhs = new_expression(ExpressionNode::logical_expression(lhs, op, rhs));
+            lhs = ExpressionNode::logical_expression(lhs, op, rhs).wrapped();
         }
 
         return Ok(lhs);
@@ -443,7 +426,7 @@ impl Parser {
             let op = self.consume_token_one([TokenType::AndToken])?;
             let rhs = self.parse_logical_or()?;
 
-            lhs = new_expression(ExpressionNode::logical_expression(lhs, op, rhs));
+            lhs = ExpressionNode::logical_expression(lhs, op, rhs).wrapped();
         }
 
         return Ok(lhs);
@@ -457,7 +440,7 @@ impl Parser {
                 self.consume_token_one([TokenType::BangEqualsToken, TokenType::EqualsToken])?;
 
             let rhs = self.parse_comparison()?;
-            lhs = new_expression(ExpressionNode::binary_expression(lhs, tok, rhs));
+            lhs = ExpressionNode::binary_expression(lhs, tok, rhs).wrapped();
         }
 
         return Ok(lhs);
@@ -480,7 +463,7 @@ impl Parser {
             ])?;
 
             let rhs = self.parse_term()?;
-            lhs = new_expression(ExpressionNode::binary_expression(lhs, tok, rhs));
+            lhs = ExpressionNode::binary_expression(lhs, tok, rhs).wrapped();
         }
 
         return Ok(lhs);
@@ -493,7 +476,7 @@ impl Parser {
             let tok = self.consume_token_one([TokenType::PlusToken, TokenType::MinusToken])?;
             let rhs = self.parse_factor()?;
 
-            lhs = new_expression(ExpressionNode::binary_expression(lhs, tok, rhs));
+            lhs = ExpressionNode::binary_expression(lhs, tok, rhs).wrapped();
         }
 
         return Ok(lhs);
@@ -507,7 +490,7 @@ impl Parser {
                 self.consume_token_one([TokenType::StarToken, TokenType::ForwardSlashToken])?;
             let rhs = self.parse_unary()?;
 
-            lhs = new_expression(ExpressionNode::binary_expression(lhs, tok, rhs));
+            lhs = ExpressionNode::binary_expression(lhs, tok, rhs).wrapped();
         }
 
         return Ok(lhs);
@@ -518,7 +501,7 @@ impl Parser {
             let tok = self.consume_token_one([TokenType::NotToken, TokenType::MinusToken])?;
             let rhs = self.parse_array_index()?;
 
-            return Ok(new_expression(ExpressionNode::unary_expression(tok, rhs)));
+            return Ok(ExpressionNode::unary_expression(tok, rhs).wrapped());
         }
 
         return self.parse_array_index();
@@ -532,9 +515,7 @@ impl Parser {
             let index_expr = self.parse_expression()?;
             self.consume_token_one([TokenType::CloseSquareBraceToken])?;
 
-            expr = new_expression(ExpressionNode::array_index_expression(
-                open_brace, expr, index_expr,
-            ));
+            expr = ExpressionNode::array_index_expression(open_brace, expr, index_expr).wrapped();
         }
 
         return Ok(expr);
@@ -552,9 +533,7 @@ impl Parser {
                 var.push(self.consume_token_one([TokenType::IdentifierToken])?);
             }
 
-            return Ok(new_expression(ExpressionNode::variable_expression(
-                indicator, var,
-            )));
+            return Ok(ExpressionNode::variable_expression(indicator, var).wrapped());
         }
 
         return self.parse_function_call();
@@ -606,12 +585,13 @@ impl Parser {
                 }
             }
 
-            return Ok(new_expression(ExpressionNode::call_expression(
+            return Ok(ExpressionNode::call_expression(
                 indicator,
                 module_name,
                 function_name,
                 arguments,
-            )));
+            )
+            .wrapped());
         }
 
         return self.parse_constructor_call();
@@ -647,11 +627,12 @@ impl Parser {
 
             self.consume_token_one([TokenType::PipeToken])?;
 
-            return Ok(new_expression(ExpressionNode::constructor_call_expression(
+            return Ok(ExpressionNode::constructor_call_expression(
                 struct_name,
                 module_name,
                 arguments,
-            )));
+            )
+            .wrapped());
         }
 
         return self.parse_primary();
@@ -665,9 +646,7 @@ impl Parser {
                 Err(_) => return Err(ParserError::invalid_integer_literal(tok)),
             };
 
-            return Ok(new_expression(ExpressionNode::literal_expression(
-                Value::Integer(int),
-            )));
+            return Ok(ExpressionNode::literal_expression(tok, Value::Integer(int)).wrapped());
         }
 
         if self.matches(TokenType::DoubleLiteralToken) {
@@ -677,18 +656,14 @@ impl Parser {
                 Err(_) => return Err(ParserError::invalid_double_literal(tok)),
             };
 
-            return Ok(new_expression(ExpressionNode::literal_expression(
-                Value::Float(dbl),
-            )));
+            return Ok(ExpressionNode::literal_expression(tok, Value::Float(dbl)).wrapped());
         }
 
         if self.matches(TokenType::CharacterLiteralToken) {
             let tok = self.consume_token_one([TokenType::CharacterLiteralToken])?;
             let ch = tok.lexeme().chars().next().unwrap();
 
-            return Ok(new_expression(ExpressionNode::literal_expression(
-                Value::Character(ch),
-            )));
+            return Ok(ExpressionNode::literal_expression(tok, Value::Character(ch)).wrapped());
         }
 
         if self.matches(TokenType::StringLiteralToken) {
@@ -704,29 +679,23 @@ impl Parser {
                 ));
             }
 
-            let count = new_expression(ExpressionNode::literal_expression(Value::Integer(
-                count as i64,
-            )));
+            let count =
+                ExpressionNode::literal_expression(tok.clone(), Value::Integer(count as i64))
+                    .wrapped();
 
-            return Ok(new_expression(ExpressionNode::array_allocation_expression(
-                tok, array, count,
-            )));
+            return Ok(ExpressionNode::array_allocation_expression(tok, array, count).wrapped());
         }
 
         if self.matches(TokenType::TrueToken) {
-            self.consume_token_one([TokenType::TrueToken])?;
+            let tok = self.consume_token_one([TokenType::TrueToken])?;
 
-            return Ok(new_expression(ExpressionNode::literal_expression(
-                Value::Boolean(true),
-            )));
+            return Ok(ExpressionNode::literal_expression(tok, Value::Boolean(true)).wrapped());
         }
 
         if self.matches(TokenType::FalseToken) {
-            self.consume_token_one([TokenType::FalseToken])?;
+            let tok = self.consume_token_one([TokenType::FalseToken])?;
 
-            return Ok(new_expression(ExpressionNode::literal_expression(
-                Value::Boolean(false),
-            )));
+            return Ok(ExpressionNode::literal_expression(tok, Value::Boolean(false)).wrapped());
         }
 
         if self.matches(TokenType::OpenRoundBraceToken) {
@@ -735,9 +704,7 @@ impl Parser {
             let expr = self.parse_expression()?;
             self.consume_token_one([TokenType::CloseRoundBraceToken])?;
 
-            return Ok(new_expression(ExpressionNode::grouping_expression(
-                tok, expr,
-            )));
+            return Ok(ExpressionNode::grouping_expression(tok, expr).wrapped());
         }
 
         return Err(ParserError::unexpected_token(

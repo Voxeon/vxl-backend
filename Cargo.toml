@@ -16,6 +16,8 @@ unix-std_library = []
 voxeon_os-std_library = []
 windows-std_library = []
 
+test-intensive = []
+
 [dependencies]
 hex = "0.4"
 paste = "1.0"

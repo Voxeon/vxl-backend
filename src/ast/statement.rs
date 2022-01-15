@@ -65,17 +65,65 @@ struct_enum_with_functional_inits! {
     }
 }
 
-#[inline]
-pub(crate) fn new_statement(node: StatementNode) -> Statement {
-    return Rc::new(RefCell::new(node));
-}
-
 impl StatementNode {
+    #[inline]
+    pub fn wrapped(self) -> Statement {
+        return Rc::new(RefCell::new(self));
+    }
+
     #[inline]
     pub fn borrow_preprocessor_command(&self) -> &PreProcessorCommand {
         return match self {
             StatementNode::PreProcessorCommandStatement { symbol: _, command } => command,
             _ => internal_error!("Not a pre processor command statement"),
+        };
+    }
+
+    pub fn reference_token(&self) -> Token {
+        return match self {
+            StatementNode::ExpressionStatement { expr } => expr.borrow().reference_token().clone(),
+            StatementNode::ReturnStatement { keyword, value: _ } => keyword.clone(),
+            StatementNode::VariableDeclarationStatement {
+                keyword,
+                name: _,
+                initializer: _,
+            } => keyword.clone(),
+            StatementNode::BlockStatement {
+                open_brace,
+                body: _,
+            } => open_brace.clone(),
+            StatementNode::WhileStatement {
+                keyword,
+                condition: _,
+                body: _,
+            } => keyword.clone(),
+            StatementNode::ForStatement {
+                keyword,
+                variable_name: _,
+                start: _,
+                stop: _,
+                step: _,
+                body: _,
+            } => keyword.clone(),
+            StatementNode::IfStatement {
+                keyword,
+                condition: _,
+                body: _,
+                else_body: _,
+            } => keyword.clone(),
+            StatementNode::FunctionStatement {
+                keyword,
+                name: _,
+                arguments: _,
+                return_type: _,
+                body: _,
+            } => keyword.clone(),
+            StatementNode::StructStatement {
+                keyword,
+                name: _,
+                fields: _,
+            } => keyword.clone(),
+            StatementNode::PreProcessorCommandStatement { symbol, command: _ } => symbol.clone(),
         };
     }
 

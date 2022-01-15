@@ -53,4 +53,34 @@ impl CompilableStatementNode {
     pub fn wrapped(self) -> CompilableStatement {
         return Rc::new(RefCell::new(self));
     }
+
+    pub fn always_returns(&self) -> bool {
+        return match self {
+            CompilableStatementNode::ReturnStatement {
+                value: _,
+                value_type: _,
+            } => true,
+            CompilableStatementNode::WhileStatement { condition: _, body } => {
+                body.borrow().always_returns
+            }
+            CompilableStatementNode::ForStatement {
+                variable_name: _,
+                start: _,
+                stop: _,
+                step: _,
+                body,
+            } => body.borrow().always_returns,
+            CompilableStatementNode::IfStatement {
+                condition: _,
+                body,
+                else_body,
+            } => {
+                body.borrow().always_returns
+                    && else_body.is_some()
+                    && else_body.as_ref().unwrap().borrow().always_returns
+            }
+            CompilableStatementNode::Block { block } => block.borrow().always_returns,
+            _ => false,
+        };
+    }
 }

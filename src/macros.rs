@@ -98,3 +98,15 @@ macro_rules! hashmap {
         vec![$(($k, $v)),*].into_iter().collect()
     };
 }
+
+// Used in testing
+#[allow(unused_macros)]
+macro_rules! assert_eq_one {
+    ($lhs:expr, $($rhs:expr),+) => {
+        if !($(
+            $lhs == $rhs
+        ) || +) {
+            panic!("assertion failed: `(left == right) && (right == left)` \n\tleft: `{:?}`", $lhs);
+        }
+    };
+}

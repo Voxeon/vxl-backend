@@ -206,7 +206,7 @@ impl PreProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::{new_statement, StatementNode};
+    use crate::ast::StatementNode;
     use crate::Token;
 
     #[test]
@@ -214,7 +214,7 @@ mod tests {
         let mut input = VecDeque::new();
         let mut root_ast = AST::new();
 
-        root_ast.push_statement(new_statement(
+        root_ast.push_statement(
             StatementNode::pre_processor_command_statement(
                 Token::new_identifier("begin".to_string(), 1, 1, None),
                 PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
@@ -223,16 +223,18 @@ mod tests {
                     1,
                     None,
                 )),
-            ),
-        ));
+            )
+            .wrapped(),
+        );
 
-        let main_function_stmt = new_statement(StatementNode::function_statement(
+        let main_function_stmt = StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("main".to_string(), 0, 0, None),
             Vec::new(),
             None,
             Vec::new(),
-        ));
+        )
+        .wrapped();
 
         root_ast.push_statement(main_function_stmt.clone());
 
@@ -266,7 +268,7 @@ mod tests {
         let mut input = VecDeque::new();
         let mut root_ast = AST::new();
 
-        root_ast.push_statement(new_statement(
+        root_ast.push_statement(
             StatementNode::pre_processor_command_statement(
                 Token::new_identifier("begin".to_string(), 1, 1, None),
                 PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
@@ -275,14 +277,16 @@ mod tests {
                     1,
                     None,
                 )),
-            ),
-        ));
+            )
+            .wrapped(),
+        );
 
-        let my_struct_stmt = new_statement(StatementNode::struct_statement(
+        let my_struct_stmt = StatementNode::struct_statement(
             Token::new_identifier("struct".to_string(), 2, 1, None),
             Token::new_identifier("my_struct".to_string(), 0, 0, None),
             HashMap::new(),
-        ));
+        )
+        .wrapped();
 
         root_ast.push_statement(my_struct_stmt.clone());
 
@@ -319,7 +323,7 @@ mod tests {
         let mut input = VecDeque::new();
         let mut root_ast = AST::new();
 
-        root_ast.push_statement(new_statement(
+        root_ast.push_statement(
             StatementNode::pre_processor_command_statement(
                 Token::new_identifier("begin".to_string(), 1, 1, None),
                 PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
@@ -328,18 +332,20 @@ mod tests {
                     1,
                     None,
                 )),
-            ),
-        ));
+            )
+            .wrapped(),
+        );
 
         let module = Token::new_identifier("secondary".to_string(), 1, 1, None);
         let import_a = Token::new_identifier("a".to_string(), 1, 1, None);
 
-        root_ast.push_statement(new_statement(
+        root_ast.push_statement(
             StatementNode::pre_processor_command_statement(
                 Token::new_identifier("import".to_string(), 1, 1, None),
                 PreProcessorCommand::ImportCommand(module.clone(), vec![import_a.clone()]),
-            ),
-        ));
+            )
+            .wrapped(),
+        );
 
         input.push_front(root_ast);
 
@@ -370,7 +376,7 @@ mod tests {
         let mut input = VecDeque::new();
         let mut root_ast = AST::new();
 
-        root_ast.push_statement(new_statement(
+        root_ast.push_statement(
             StatementNode::pre_processor_command_statement(
                 Token::new_identifier("begin".to_string(), 1, 1, None),
                 PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
@@ -379,24 +385,27 @@ mod tests {
                     1,
                     None,
                 )),
-            ),
-        ));
+            )
+            .wrapped(),
+        );
 
-        let main_function_stmt = new_statement(StatementNode::function_statement(
+        let main_function_stmt = StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("main".to_string(), 0, 0, None),
             Vec::new(),
             None,
             Vec::new(),
-        ));
+        )
+        .wrapped();
 
         root_ast.push_statement(main_function_stmt.clone());
 
-        let my_struct_stmt = new_statement(StatementNode::struct_statement(
+        let my_struct_stmt = StatementNode::struct_statement(
             Token::new_identifier("struct".to_string(), 2, 1, None),
             Token::new_identifier("my_struct".to_string(), 0, 0, None),
             HashMap::new(),
-        ));
+        )
+        .wrapped();
 
         root_ast.push_statement(my_struct_stmt.clone());
 
@@ -434,7 +443,7 @@ mod tests {
         let mut root_ast = AST::new();
         let mut second_ast = AST::new();
 
-        root_ast.push_statement(new_statement(
+        root_ast.push_statement(
             StatementNode::pre_processor_command_statement(
                 Token::new_identifier("begin".to_string(), 1, 1, None),
                 PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
@@ -443,28 +452,31 @@ mod tests {
                     1,
                     None,
                 )),
-            ),
-        ));
+            )
+            .wrapped(),
+        );
 
-        let main_function_stmt = new_statement(StatementNode::function_statement(
+        let main_function_stmt = StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("main".to_string(), 0, 0, None),
             Vec::new(),
             None,
             Vec::new(),
-        ));
+        )
+        .wrapped();
 
         root_ast.push_statement(main_function_stmt.clone());
 
-        let my_struct_stmt = new_statement(StatementNode::struct_statement(
+        let my_struct_stmt = StatementNode::struct_statement(
             Token::new_identifier("struct".to_string(), 2, 1, None),
             Token::new_identifier("my_struct".to_string(), 0, 0, None),
             HashMap::new(),
-        ));
+        )
+        .wrapped();
 
         root_ast.push_statement(my_struct_stmt.clone());
 
-        second_ast.push_statement(new_statement(
+        second_ast.push_statement(
             StatementNode::pre_processor_command_statement(
                 Token::new_identifier("begin".to_string(), 1, 1, None),
                 PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
@@ -473,24 +485,27 @@ mod tests {
                     1,
                     None,
                 )),
-            ),
-        ));
+            )
+            .wrapped(),
+        );
 
-        let second_function_stmt = new_statement(StatementNode::function_statement(
+        let second_function_stmt = StatementNode::function_statement(
             Token::new_identifier("func".to_string(), 2, 1, None),
             Token::new_identifier("second".to_string(), 0, 0, None),
             Vec::new(),
             None,
             Vec::new(),
-        ));
+        )
+        .wrapped();
 
         second_ast.push_statement(second_function_stmt.clone());
 
-        let second_struct_stmt = new_statement(StatementNode::struct_statement(
+        let second_struct_stmt = StatementNode::struct_statement(
             Token::new_identifier("struct".to_string(), 2, 1, None),
             Token::new_identifier("my_second_struct".to_string(), 0, 0, None),
             HashMap::new(),
-        ));
+        )
+        .wrapped();
 
         second_ast.push_statement(second_struct_stmt.clone());
 

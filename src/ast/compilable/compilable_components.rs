@@ -32,6 +32,7 @@ pub struct CompilableBlockNode {
     pub(crate) parent_block: Option<CompilableBlock>,
     pub(crate) variable_list: HashMap<String, Type>,
     pub(crate) body: Vec<CompilableStatement>,
+    pub(crate) always_returns: bool,
 }
 
 impl CompilableProgram {
@@ -67,11 +68,13 @@ impl CompilableBlockNode {
         parent_block: Option<CompilableBlock>,
         variable_list: HashMap<String, Type>,
         body: Vec<CompilableStatement>,
+        contains_return: bool,
     ) -> Self {
         return Self {
             parent_block,
             variable_list,
             body,
+            always_returns: contains_return,
         };
     }
 
@@ -80,6 +83,7 @@ impl CompilableBlockNode {
             parent_block: Some(parent_block),
             variable_list: HashMap::new(),
             body: Vec::new(),
+            always_returns: false,
         };
     }
 
@@ -94,6 +98,6 @@ impl CompilableBlockNode {
 
 impl Default for CompilableBlockNode {
     fn default() -> Self {
-        return Self::new(None, HashMap::new(), Vec::new());
+        return Self::new(None, HashMap::new(), Vec::new(), false);
     }
 }

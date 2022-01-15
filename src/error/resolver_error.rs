@@ -45,11 +45,9 @@ struct_enum_with_functional_inits! {
             import_module: String,
             current_module: String
         }
-        NoReturnStatementPermitted {
-            return_statement: Token
-        }
         ReturnTypeDoesNotMatch {
             function_reference_token: Token,
+            keyword: Token,
             function_return_type: Option<Type>,
             return_type: Option<Type>
         }
@@ -172,6 +170,14 @@ struct_enum_with_functional_inits! {
             recursive_struct_module: String,
             field_name: String
         }
+        FunctionDoesNotAlwaysReturn {
+            function_reference_token: Token,
+            return_type: Type
+        }
+        UnreachableStatement {
+            function_reference_token: Token,
+            statement: Token
+        }
     }
 }
 
@@ -268,23 +274,18 @@ impl fmt::Display for ResolverError {
                     current_module
                 )
             }
-            ResolverError::NoReturnStatementPermitted { return_statement } => {
-                write!(
-                    f,
-                    "Return statements are not permitted here {}",
-                    return_statement
-                )
-            }
             ResolverError::ReturnTypeDoesNotMatch {
                 function_reference_token,
+                keyword,
                 function_return_type,
                 return_type,
             } => write!(
                 f,
-                "Return type does not match function definition ({} != {}) {}",
+                "Return type does not match function definition ({} != {}) {} {}",
                 optional_type_to_string(function_return_type),
                 optional_type_to_string(return_type),
-                function_reference_token
+                function_reference_token,
+                keyword
             ),
 
             ResolverError::NoObjectDefinedWithNameInModuleInFunction {
@@ -528,6 +529,12 @@ impl fmt::Display for ResolverError {
             }
             ResolverError::RecursiveReferenceDetected { root_struct_name, root_struct_module, recursive_struct_name, recursive_struct_module, field_name } => {
                 write!(f, "Recursive struct definition detected. The struct '{}' in the module '{}' is referenced in the field '{}' of the struct '{}' in the module '{}' which forms a circular reference.", root_struct_name, root_struct_module, field_name, recursive_struct_name, recursive_struct_module)
+            },
+            ResolverError::FunctionDoesNotAlwaysReturn { function_reference_token, return_type } => {
+                write!(f, "The function '{}' does not always return. Ensure the function returns a value of type {} {}", function_reference_token.lexeme(), return_type, function_reference_token)
+            },
+            ResolverError::UnreachableStatement { function_reference_token, statement } => {
+                write!(f, "The function '{}' returns before reaching the statement '{}' {}", function_reference_token.lexeme(), statement.lexeme(), statement)
             },
         };
     }

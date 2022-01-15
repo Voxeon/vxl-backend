@@ -22,6 +22,7 @@ struct_enum_with_functional_inits! {
             index_expression: Expression
         }
         LiteralExpression {
+            reference_token: Token,
             value: Value
         }
         UnaryExpression {
@@ -65,12 +66,65 @@ struct_enum_with_functional_inits! {
     }
 }
 
-#[inline]
-pub(crate) fn new_expression(node: ExpressionNode) -> Expression {
-    return Rc::new(RefCell::new(node));
-}
-
 impl ExpressionNode {
+    #[inline]
+    pub fn wrapped(self) -> Expression {
+        return Rc::new(RefCell::new(self));
+    }
+
+    pub fn reference_token(&self) -> &Token {
+        return match self {
+            ExpressionNode::ArrayAllocationExpression {
+                reference_token,
+                array_type: _,
+                count: _,
+            } => reference_token,
+            ExpressionNode::ArrayIndexExpression {
+                open_brace_token,
+                array_expression: _,
+                index_expression: _,
+            } => open_brace_token,
+            ExpressionNode::LiteralExpression {
+                reference_token,
+                value: _,
+            } => reference_token,
+            ExpressionNode::UnaryExpression { operator, rhs: _ } => operator,
+            ExpressionNode::BinaryExpression {
+                lhs: _,
+                operator,
+                rhs: _,
+            } => operator,
+            ExpressionNode::LogicalExpression {
+                lhs: _,
+                operator,
+                rhs: _,
+            } => operator,
+            ExpressionNode::VariableExpression {
+                keyword: _,
+                variable: _,
+            } => todo!(),
+            ExpressionNode::AssignmentExpression {
+                lhs: _,
+                operator,
+                rhs: _,
+            } => operator,
+            ExpressionNode::GroupingExpression {
+                reference_token,
+                expression: _,
+            } => reference_token,
+            ExpressionNode::CallExpression {
+                keyword,
+                module: _,
+                name: _,
+                arguments: _,
+            } => keyword,
+            ExpressionNode::ConstructorCallExpression {
+                target_struct,
+                module: _,
+                arguments: _,
+            } => target_struct,
+        };
+    }
     pub fn is_assignable_expression(&self) -> bool {
         return self.is_variable_expression() || self.is_array_index_expression();
     }

@@ -213,6 +213,7 @@ impl Resolver {
         let mut visited_structs = HashSet::new();
 
         for (_name, field_tp) in struct_def.fields() {
+            // TODO: Optimize these two processes to not require two functions
             self.check_type(
                 field_tp,
                 None,
@@ -246,6 +247,8 @@ impl Resolver {
     ) -> ResolverResult<()> {
         if visited_structs.contains(current_struct) {
             return Ok(());
+        } else {
+            visited_structs.insert(current_struct);
         }
 
         match current_struct {
@@ -290,8 +293,6 @@ impl Resolver {
             )),
         }
 
-        visited_structs.insert(current_struct);
-
         return Ok(());
     }
 
@@ -327,6 +328,22 @@ impl Resolver {
             self.check_type(tp, None, Some(function_name), None, current_module, imports)?;
         }
 
+        let body = self.check_block(
+            function_name,
+            return_type,
+            body,
+            current_module,
+            None,
+            imports,
+        )?;
+
+        if return_type.is_some() && !body.borrow().always_returns {
+            return Err(ResolverError::function_does_not_always_return(
+                function_name.clone(),
+                return_type.as_ref().unwrap().clone(),
+            ));
+        }
+
         return Ok(CompilableFunction::new(
             Self::encode_fn_name(function_name.lexeme(), current_module.name()),
             function_arguments
@@ -334,37 +351,41 @@ impl Resolver {
                 .map(|(name, tp)| (name.lexeme().clone(), tp.clone()))
                 .collect(),
             return_type.clone(),
-            self.check_block(
-                function_name,
-                true,
-                return_type,
-                body,
-                current_module,
-                None,
-                imports,
-            )?,
+            body,
         ));
     }
 
     fn check_block(
         &self,
         function_reference_token: &Token,
-        return_allowed: bool,
         return_type: &Option<Type>,
         statements: &Vec<Statement>,
         current_module: &ProcessedModule,
         parent_block: Option<&mut CompilableBlock>,
         imports: Option<&HashSet<String>>,
     ) -> ResolverResult<CompilableBlock> {
-        let mut block =
-            CompilableBlockNode::new(parent_block.map(|b| b.clone()), HashMap::new(), Vec::new())
-                .wrapped();
+        let mut block = CompilableBlockNode::new(
+            parent_block.map(|b| b.clone()),
+            HashMap::new(),
+            Vec::new(),
+            false,
+        )
+        .wrapped();
+
         let mut body = Vec::new();
 
+        let mut always_returns = false;
+
         for statement in statements {
+            if always_returns {
+                return Err(ResolverError::unreachable_statement(
+                    function_reference_token.clone(),
+                    statement.borrow().reference_token(),
+                ));
+            }
+
             let stmt = self.check_statement(
                 function_reference_token,
-                return_allowed,
                 return_type,
                 current_module,
                 imports,
@@ -372,11 +393,16 @@ impl Resolver {
                 statement,
             )?;
 
+            if stmt.borrow().always_returns() {
+                always_returns = true;
+            }
+
             body.push(stmt);
         }
 
         // Only borrow the pointer once
         block.borrow_mut().body = body;
+        block.borrow_mut().always_returns = always_returns;
 
         return Ok(block);
     }
@@ -384,7 +410,6 @@ impl Resolver {
     fn check_statement(
         &self,
         function_reference_token: &Token,
-        return_allowed: bool,
         return_type: &Option<Type>,
         current_module: &ProcessedModule,
         imports: Option<&HashSet<String>>,
@@ -407,12 +432,6 @@ impl Resolver {
                     });
             }
             StatementNode::ReturnStatement { keyword, value } => {
-                if !return_allowed {
-                    return Err(ResolverError::no_return_statement_permitted(
-                        keyword.clone(),
-                    ));
-                }
-
                 if let Some(return_value) = value {
                     if let Some(return_type) = return_type {
                         let (expr, expression_type) = self.check_expression(
@@ -428,6 +447,7 @@ impl Resolver {
                         {
                             return Err(ResolverError::return_type_does_not_match(
                                 function_reference_token.clone(),
+                                keyword.clone(),
                                 Some(return_type.clone()),
                                 expression_type,
                             ));
@@ -445,6 +465,7 @@ impl Resolver {
 
                 return Err(ResolverError::return_type_does_not_match(
                     function_reference_token.clone(),
+                    keyword.clone(),
                     return_type.clone(),
                     None,
                 ));
@@ -487,7 +508,6 @@ impl Resolver {
             } => {
                 let block = self.check_block(
                     function_reference_token,
-                    return_allowed,
                     return_type,
                     body,
                     current_module,
@@ -519,7 +539,6 @@ impl Resolver {
 
                 let body = self.check_block(
                     function_reference_token,
-                    return_allowed,
                     return_type,
                     body,
                     current_module,
@@ -592,7 +611,6 @@ impl Resolver {
 
                 let body = self.check_block(
                     function_reference_token,
-                    return_allowed,
                     return_type,
                     body,
                     current_module,
@@ -632,7 +650,6 @@ impl Resolver {
 
                 let body = self.check_block(
                     function_reference_token,
-                    return_allowed,
                     return_type,
                     body,
                     current_module,
@@ -643,7 +660,6 @@ impl Resolver {
                 let else_body = if let Some(else_body) = else_body {
                     Some(self.check_block(
                         function_reference_token,
-                        return_allowed,
                         return_type,
                         else_body,
                         current_module,
@@ -734,7 +750,10 @@ impl Resolver {
 
                 (expr, Some(tp))
             }
-            ExpressionNode::LiteralExpression { value } => (
+            ExpressionNode::LiteralExpression {
+                reference_token: _,
+                value,
+            } => (
                 CompilableExpressionNode::literal_expression(value.clone()).wrapped(),
                 Some(value.get_type()),
             ),

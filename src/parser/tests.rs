@@ -1,6 +1,6 @@
 use super::{
-    new_expression, new_statement, ArrayLiteral, ExpressionNode, Parser, ParserError,
-    PreProcessorCommand, StatementNode, Token, TokenType, Type, Value, Variable, AST,
+    ArrayLiteral, ExpressionNode, Parser, ParserError, PreProcessorCommand, StatementNode, Token,
+    TokenType, Type, Value, Variable, AST,
 };
 
 use std::collections::HashMap;
@@ -41,7 +41,7 @@ mod test_primary {
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::array_allocation_expression(
+            ExpressionNode::array_allocation_expression(
                 Token::new(
                     TokenType::StringLiteralToken,
                     "string".to_string(),
@@ -50,8 +50,19 @@ mod test_primary {
                     None,
                 ),
                 ArrayLiteral::from(&"string".to_string()),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(6))),
-            ))
+                ExpressionNode::literal_expression(
+                    Token::new(
+                        TokenType::StringLiteralToken,
+                        "string".to_string(),
+                        1,
+                        1,
+                        None,
+                    ),
+                    Value::Integer(6)
+                )
+                .wrapped(),
+            )
+            .wrapped()
         );
     }
 
@@ -68,7 +79,11 @@ mod test_primary {
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::literal_expression(Value::Integer(55)))
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "55".to_string(), 1, 1, None,),
+                Value::Integer(55)
+            )
+            .wrapped()
         );
     }
 
@@ -85,7 +100,17 @@ mod test_primary {
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::literal_expression(Value::Float(55.22)))
+            ExpressionNode::literal_expression(
+                Token::new(
+                    TokenType::DoubleLiteralToken,
+                    "55.22".to_string(),
+                    1,
+                    1,
+                    None,
+                ),
+                Value::Float(55.22)
+            )
+            .wrapped()
         );
     }
 
@@ -102,7 +127,11 @@ mod test_primary {
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::literal_expression(Value::Boolean(true)))
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::TrueToken, "true".to_string(), 1, 1, None,),
+                Value::Boolean(true)
+            )
+            .wrapped()
         );
     }
 
@@ -119,7 +148,11 @@ mod test_primary {
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::literal_expression(Value::Boolean(false)))
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::FalseToken, "false".to_string(), 1, 1, None,),
+                Value::Boolean(false)
+            )
+            .wrapped()
         );
     }
 
@@ -136,7 +169,17 @@ mod test_primary {
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::literal_expression(Value::Character('c')))
+            ExpressionNode::literal_expression(
+                Token::new(
+                    TokenType::CharacterLiteralToken,
+                    "c".to_string(),
+                    1,
+                    1,
+                    None,
+                ),
+                Value::Character('c')
+            )
+            .wrapped()
         );
     }
 
@@ -154,15 +197,26 @@ mod test_primary {
             Token::new(TokenType::CloseRoundBraceToken, ")".to_string(), 1, 3, None),
         ];
 
-        let literal = new_expression(ExpressionNode::literal_expression(Value::Character('c')));
+        let literal = ExpressionNode::literal_expression(
+            Token::new(
+                TokenType::CharacterLiteralToken,
+                "c".to_string(),
+                1,
+                2,
+                None,
+            ),
+            Value::Character('c'),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::grouping_expression(
+            ExpressionNode::grouping_expression(
                 Token::new(TokenType::OpenRoundBraceToken, "(".to_string(), 1, 1, None,),
                 literal
-            ))
+            )
+            .wrapped()
         );
     }
 }
@@ -178,14 +232,20 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(TokenType::PlusToken, "+".to_string(), 1, 3, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            ))
+                rhs,
+            )
+            .wrapped()
         );
     }
 
@@ -197,14 +257,20 @@ mod test_binary_expression {
             (TokenType::DoubleLiteralToken, "52.22"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Float(55.22)).wrapped();
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Float(52.22)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Float(55.22))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(TokenType::PlusToken, "+".to_string(), 1, 6, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Float(52.22))),
-            ))
+                rhs,
+            )
+            .wrapped()
         );
     }
 
@@ -216,14 +282,20 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(TokenType::MinusToken, "-".to_string(), 1, 3, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            ))
+                rhs,
+            )
+            .wrapped()
         );
     }
 
@@ -235,14 +307,20 @@ mod test_binary_expression {
             (TokenType::DoubleLiteralToken, "52.22"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Float(55.22)).wrapped();
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Float(52.22)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Float(55.22))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(TokenType::MinusToken, "-".to_string(), 1, 6, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Float(52.22))),
-            ))
+                rhs,
+            )
+            .wrapped()
         );
     }
 
@@ -254,14 +332,21 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(TokenType::StarToken, "*".to_string(), 1, 3, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            ))
+                rhs
+            )
+            .wrapped()
         );
     }
 
@@ -273,14 +358,21 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(TokenType::ForwardSlashToken, "/".to_string(), 1, 3, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            ))
+                rhs
+            )
+            .wrapped()
         );
     }
 
@@ -292,14 +384,21 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(TokenType::GreaterThanToken, ">".to_string(), 1, 3, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            ))
+                rhs,
+            )
+            .wrapped()
         );
     }
 
@@ -311,11 +410,17 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(
                     TokenType::GreaterThanEqualToken,
                     ">=".to_string(),
@@ -323,8 +428,9 @@ mod test_binary_expression {
                     3,
                     None,
                 ),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            ))
+                rhs
+            )
+            .wrapped()
         );
     }
 
@@ -336,14 +442,21 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(TokenType::LessThanToken, "<".to_string(), 1, 3, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            ))
+                rhs,
+            )
+            .wrapped()
         );
     }
 
@@ -355,14 +468,21 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(TokenType::LessThanEqualToken, "<=".to_string(), 1, 3, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            ))
+                rhs
+            )
+            .wrapped()
         );
     }
 
@@ -374,14 +494,21 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(TokenType::EqualsToken, "=".to_string(), 1, 3, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            ))
+                rhs
+            )
+            .wrapped()
         );
     }
 
@@ -393,14 +520,21 @@ mod test_binary_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
+        let lhs =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
+            ExpressionNode::binary_expression(
+                lhs,
                 Token::new(TokenType::BangEqualsToken, "!=".to_string(), 1, 3, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            ))
+                rhs
+            )
+            .wrapped()
         );
     }
 }
@@ -420,19 +554,24 @@ mod test_logical_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::logical_expression(
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                tokens[1].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            )),
+        let lhs_1 =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_1 =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
+        let lhs_2 =
+            ExpressionNode::literal_expression(tokens[4].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_2 =
+            ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(52)).wrapped();
+
+        let cmp = ExpressionNode::logical_expression(
+            ExpressionNode::binary_expression(lhs_1, tokens[1].clone(), rhs_1).wrapped(),
             tokens[3].clone(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                tokens[5].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            )),
-        ));
+            ExpressionNode::binary_expression(lhs_2, tokens[5].clone(), rhs_2).wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
 
@@ -451,19 +590,24 @@ mod test_logical_expression {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::logical_expression(
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                tokens[1].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            )),
+        let lhs_1 =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_1 =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
+        let lhs_2 =
+            ExpressionNode::literal_expression(tokens[4].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_2 =
+            ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(52)).wrapped();
+
+        let cmp = ExpressionNode::logical_expression(
+            ExpressionNode::binary_expression(lhs_1, tokens[1].clone(), rhs_1).wrapped(),
             tokens[3].clone(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                tokens[5].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            )),
-        ));
+            ExpressionNode::binary_expression(lhs_2, tokens[5].clone(), rhs_2).wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
 
@@ -486,27 +630,35 @@ mod test_logical_expression {
             (TokenType::IntegerLiteralToken, "1"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::logical_expression(
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                tokens[1].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            )),
+        let lhs_1 =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_1 =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
+        let lhs_2 =
+            ExpressionNode::literal_expression(tokens[4].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_2 =
+            ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(52)).wrapped();
+
+        let lhs_3 =
+            ExpressionNode::literal_expression(tokens[8].clone(), Value::Integer(3)).wrapped();
+
+        let rhs_3 =
+            ExpressionNode::literal_expression(tokens[10].clone(), Value::Integer(1)).wrapped();
+
+        let cmp = ExpressionNode::logical_expression(
+            ExpressionNode::binary_expression(lhs_1, tokens[1].clone(), rhs_1).wrapped(),
             tokens[3].clone(),
-            new_expression(ExpressionNode::logical_expression(
-                new_expression(ExpressionNode::binary_expression(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                    tokens[5].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-                )),
+            ExpressionNode::logical_expression(
+                ExpressionNode::binary_expression(lhs_2, tokens[5].clone(), rhs_2).wrapped(),
                 tokens[7].clone(),
-                new_expression(ExpressionNode::binary_expression(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(3))),
-                    tokens[9].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(1))),
-                )),
-            )),
-        ));
+                ExpressionNode::binary_expression(lhs_3, tokens[9].clone(), rhs_3).wrapped(),
+            )
+            .wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
 
@@ -529,27 +681,35 @@ mod test_logical_expression {
             (TokenType::IntegerLiteralToken, "1"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::logical_expression(
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                tokens[1].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            )),
+        let lhs_1 =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_1 =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
+        let lhs_2 =
+            ExpressionNode::literal_expression(tokens[4].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_2 =
+            ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(52)).wrapped();
+
+        let lhs_3 =
+            ExpressionNode::literal_expression(tokens[8].clone(), Value::Integer(3)).wrapped();
+
+        let rhs_3 =
+            ExpressionNode::literal_expression(tokens[10].clone(), Value::Integer(1)).wrapped();
+
+        let cmp = ExpressionNode::logical_expression(
+            ExpressionNode::binary_expression(lhs_1, tokens[1].clone(), rhs_1).wrapped(),
             tokens[3].clone(),
-            new_expression(ExpressionNode::logical_expression(
-                new_expression(ExpressionNode::binary_expression(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                    tokens[5].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-                )),
+            ExpressionNode::logical_expression(
+                ExpressionNode::binary_expression(lhs_2, tokens[5].clone(), rhs_2).wrapped(),
                 tokens[7].clone(),
-                new_expression(ExpressionNode::binary_expression(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(3))),
-                    tokens[9].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(1))),
-                )),
-            )),
-        ));
+                ExpressionNode::binary_expression(lhs_3, tokens[9].clone(), rhs_3).wrapped(),
+            )
+            .wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
 
@@ -572,27 +732,35 @@ mod test_logical_expression {
             (TokenType::IntegerLiteralToken, "1"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::logical_expression(
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                tokens[1].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            )),
+        let lhs_1 =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_1 =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
+        let lhs_2 =
+            ExpressionNode::literal_expression(tokens[4].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_2 =
+            ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(52)).wrapped();
+
+        let lhs_3 =
+            ExpressionNode::literal_expression(tokens[8].clone(), Value::Integer(3)).wrapped();
+
+        let rhs_3 =
+            ExpressionNode::literal_expression(tokens[10].clone(), Value::Integer(1)).wrapped();
+
+        let cmp = ExpressionNode::logical_expression(
+            ExpressionNode::binary_expression(lhs_1, tokens[1].clone(), rhs_1).wrapped(),
             tokens[3].clone(),
-            new_expression(ExpressionNode::logical_expression(
-                new_expression(ExpressionNode::binary_expression(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                    tokens[5].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-                )),
+            ExpressionNode::logical_expression(
+                ExpressionNode::binary_expression(lhs_2, tokens[5].clone(), rhs_2).wrapped(),
                 tokens[7].clone(),
-                new_expression(ExpressionNode::binary_expression(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(3))),
-                    tokens[9].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(1))),
-                )),
-            )),
-        ));
+                ExpressionNode::binary_expression(lhs_3, tokens[9].clone(), rhs_3).wrapped(),
+            )
+            .wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
 
@@ -615,27 +783,35 @@ mod test_logical_expression {
             (TokenType::IntegerLiteralToken, "1"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::logical_expression(
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                tokens[1].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            )),
+        let lhs_1 =
+            ExpressionNode::literal_expression(tokens[0].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_1 =
+            ExpressionNode::literal_expression(tokens[2].clone(), Value::Integer(52)).wrapped();
+
+        let lhs_2 =
+            ExpressionNode::literal_expression(tokens[4].clone(), Value::Integer(55)).wrapped();
+
+        let rhs_2 =
+            ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(52)).wrapped();
+
+        let lhs_3 =
+            ExpressionNode::literal_expression(tokens[8].clone(), Value::Integer(3)).wrapped();
+
+        let rhs_3 =
+            ExpressionNode::literal_expression(tokens[10].clone(), Value::Integer(1)).wrapped();
+
+        let cmp = ExpressionNode::logical_expression(
+            ExpressionNode::binary_expression(lhs_1, tokens[1].clone(), rhs_1).wrapped(),
             tokens[3].clone(),
-            new_expression(ExpressionNode::logical_expression(
-                new_expression(ExpressionNode::binary_expression(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(55))),
-                    tokens[5].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-                )),
+            ExpressionNode::logical_expression(
+                ExpressionNode::binary_expression(lhs_2, tokens[5].clone(), rhs_2).wrapped(),
                 tokens[7].clone(),
-                new_expression(ExpressionNode::binary_expression(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(3))),
-                    tokens[9].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(1))),
-                )),
-            )),
-        ));
+                ExpressionNode::binary_expression(lhs_3, tokens[9].clone(), rhs_3).wrapped(),
+            )
+            .wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
 
@@ -653,13 +829,17 @@ mod test_unary {
             (TokenType::IntegerLiteralToken, "52"),
         ]);
 
+        let rhs =
+            ExpressionNode::literal_expression(tokens[1].clone(), Value::Integer(52)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::unary_expression(
+            ExpressionNode::unary_expression(
                 Token::new(TokenType::MinusToken, "-".to_string(), 1, 1, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-            ))
+                rhs,
+            )
+            .wrapped()
         );
     }
 
@@ -667,13 +847,17 @@ mod test_unary {
     fn test_not() {
         let tokens = new_tokens([(TokenType::NotToken, "not"), (TokenType::TrueToken, "true")]);
 
+        let rhs =
+            ExpressionNode::literal_expression(tokens[1].clone(), Value::Boolean(true)).wrapped();
+
         let mut parser = Parser::new(tokens);
         assert_eq!(
             parser.parse_expression().unwrap(),
-            new_expression(ExpressionNode::unary_expression(
+            ExpressionNode::unary_expression(
                 Token::new(TokenType::NotToken, "not".to_string(), 1, 1, None,),
-                new_expression(ExpressionNode::literal_expression(Value::Boolean(true))),
-            ))
+                rhs,
+            )
+            .wrapped()
         );
     }
 }
@@ -690,12 +874,9 @@ mod test_function_call {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::call_expression(
-            tokens[0].clone(),
-            None,
-            tokens[1].clone(),
-            Vec::new(),
-        ));
+        let cmp =
+            ExpressionNode::call_expression(tokens[0].clone(), None, tokens[1].clone(), Vec::new())
+                .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -711,14 +892,12 @@ mod test_function_call {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::call_expression(
-            tokens[0].clone(),
-            None,
-            tokens[1].clone(),
-            vec![new_expression(ExpressionNode::literal_expression(
-                Value::Integer(22),
-            ))],
-        ));
+        let arg =
+            ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(22)).wrapped();
+
+        let cmp =
+            ExpressionNode::call_expression(tokens[0].clone(), None, tokens[1].clone(), vec![arg])
+                .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -740,17 +919,25 @@ mod test_function_call {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::call_expression(
+        let a1 =
+            ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(22)).wrapped();
+
+        let a2 =
+            ExpressionNode::literal_expression(tokens[5].clone(), Value::Integer(22)).wrapped();
+
+        let a3 =
+            ExpressionNode::literal_expression(tokens[7].clone(), Value::Integer(22)).wrapped();
+
+        let a4 =
+            ExpressionNode::literal_expression(tokens[9].clone(), Value::Integer(22)).wrapped();
+
+        let cmp = ExpressionNode::call_expression(
             tokens[0].clone(),
             None,
             tokens[1].clone(),
-            vec![
-                new_expression(ExpressionNode::literal_expression(Value::Integer(22))),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(22))),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(22))),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(22))),
-            ],
-        ));
+            vec![a1, a2, a3, a4],
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -769,14 +956,16 @@ mod test_function_call {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::call_expression(
+        let a1 =
+            ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(22)).wrapped();
+
+        let cmp = ExpressionNode::call_expression(
             tokens[0].clone(),
             Some(tokens[2].clone()),
             tokens[4].clone(),
-            vec![new_expression(ExpressionNode::literal_expression(
-                Value::Integer(22),
-            ))],
-        ));
+            vec![a1],
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -794,11 +983,9 @@ mod test_constructor_call {
             (TokenType::PipeToken, "|"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::constructor_call_expression(
-            tokens[1].clone(),
-            None,
-            HashMap::new(),
-        ));
+        let cmp =
+            ExpressionNode::constructor_call_expression(tokens[1].clone(), None, HashMap::new())
+                .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -819,14 +1006,21 @@ mod test_constructor_call {
             (TokenType::PipeToken, "|"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::constructor_call_expression(
+        let a1 =
+            ExpressionNode::literal_expression(tokens[4].clone(), Value::Integer(52)).wrapped();
+
+        let a2 =
+            ExpressionNode::literal_expression(tokens[8].clone(), Value::Integer(53)).wrapped();
+
+        let cmp = ExpressionNode::constructor_call_expression(
             tokens[1].clone(),
             None,
             hashmap![
-                    tokens[2].clone() ; new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-                    tokens[6].clone() ; new_expression(ExpressionNode::literal_expression(Value::Integer(53)))
+                    tokens[2].clone() ; a1,
+                    tokens[6].clone() ; a2
             ],
-        ));
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -850,15 +1044,22 @@ mod test_constructor_call {
             (TokenType::PipeToken, "|"),
         ]);
 
-        let cmp = new_expression(ExpressionNode::constructor_call_expression(
+        let a1 =
+            ExpressionNode::literal_expression(tokens[7].clone(), Value::Integer(52)).wrapped();
+
+        let a2 =
+            ExpressionNode::literal_expression(tokens[11].clone(), Value::Integer(53)).wrapped();
+
+        let cmp = ExpressionNode::constructor_call_expression(
             tokens[1].clone(),
             Some(tokens[3].clone()),
             hashmap![
-                    tokens[5].clone() ; new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-                    tokens[9].clone() ; new_expression(ExpressionNode::literal_expression(Value::Integer(53)))
+                    tokens[5].clone() ; a1,
+                    tokens[9].clone() ; a2
 
             ],
-        ));
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -878,11 +1079,12 @@ mod test_variable {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::variable_declaration_statement(
+        let cmp = StatementNode::variable_declaration_statement(
             tokens[0].clone(),
             tokens[1].clone(),
-            new_expression(ExpressionNode::literal_expression(Value::Integer(22))),
-        ));
+            ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(22)).wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
@@ -898,10 +1100,7 @@ mod test_variable {
         let mut variable = Variable::new();
         variable.push(tokens[1].clone());
 
-        let cmp = new_expression(ExpressionNode::variable_expression(
-            tokens[0].clone(),
-            variable,
-        ));
+        let cmp = ExpressionNode::variable_expression(tokens[0].clone(), variable).wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -920,21 +1119,23 @@ mod test_variable {
             (TokenType::NewLineToken, "\n"),
         ]);
 
+        let rhs =
+            ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(1)).wrapped();
+
         let mut variable = Variable::new();
         variable.push(tokens[4].clone());
 
-        let cmp = new_statement(StatementNode::variable_declaration_statement(
+        let cmp = StatementNode::variable_declaration_statement(
             tokens[0].clone(),
             tokens[1].clone(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::variable_expression(
-                    tokens[3].clone(),
-                    variable,
-                )),
+            ExpressionNode::binary_expression(
+                ExpressionNode::variable_expression(tokens[3].clone(), variable).wrapped(),
                 tokens[5].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(1))),
-            )),
-        ));
+                rhs,
+            )
+            .wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
@@ -952,14 +1153,12 @@ mod test_variable {
         let mut variable = Variable::new();
         variable.push(tokens[1].clone());
 
-        let cmp = new_expression(ExpressionNode::assignment_expression(
-            new_expression(ExpressionNode::variable_expression(
-                tokens[0].clone(),
-                variable,
-            )),
+        let cmp = ExpressionNode::assignment_expression(
+            ExpressionNode::variable_expression(tokens[0].clone(), variable).wrapped(),
             tokens[2].clone(),
-            new_expression(ExpressionNode::literal_expression(Value::Integer(44))),
-        ));
+            ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(44)).wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -995,14 +1194,12 @@ mod test_array_index {
         let mut variable = Variable::new();
         variable.push(tokens[1].clone());
 
-        let cmp = new_expression(ExpressionNode::array_index_expression(
+        let cmp = ExpressionNode::array_index_expression(
             tokens[2].clone(),
-            new_expression(ExpressionNode::variable_expression(
-                tokens[0].clone(),
-                variable,
-            )),
-            new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-        ));
+            ExpressionNode::variable_expression(tokens[0].clone(), variable).wrapped(),
+            ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(52)).wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -1024,18 +1221,17 @@ mod test_array_index {
         let mut variable = Variable::new();
         variable.push(tokens[1].clone());
 
-        let cmp = new_expression(ExpressionNode::array_index_expression(
+        let cmp = ExpressionNode::array_index_expression(
             tokens[5].clone(),
-            new_expression(ExpressionNode::array_index_expression(
+            ExpressionNode::array_index_expression(
                 tokens[2].clone(),
-                new_expression(ExpressionNode::variable_expression(
-                    tokens[0].clone(),
-                    variable,
-                )),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(0))),
-            )),
-            new_expression(ExpressionNode::literal_expression(Value::Integer(52))),
-        ));
+                ExpressionNode::variable_expression(tokens[0].clone(), variable).wrapped(),
+                ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(0)).wrapped(),
+            )
+            .wrapped(),
+            ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(52)).wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -1061,21 +1257,17 @@ mod test_array_index {
         let mut variable_b = Variable::new();
         variable_b.push(tokens[4].clone());
 
-        let cmp = new_expression(ExpressionNode::array_index_expression(
+        let cmp = ExpressionNode::array_index_expression(
             tokens[2].clone(),
-            new_expression(ExpressionNode::variable_expression(
-                tokens[0].clone(),
-                variable_a,
-            )),
-            new_expression(ExpressionNode::array_index_expression(
+            ExpressionNode::variable_expression(tokens[0].clone(), variable_a).wrapped(),
+            ExpressionNode::array_index_expression(
                 tokens[5].clone(),
-                new_expression(ExpressionNode::variable_expression(
-                    tokens[3].clone(),
-                    variable_b,
-                )),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(0))),
-            )),
-        ));
+                ExpressionNode::variable_expression(tokens[3].clone(), variable_b).wrapped(),
+                ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(0)).wrapped(),
+            )
+            .wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -1104,25 +1296,22 @@ mod test_array_index {
         let mut variable_b = Variable::new();
         variable_b.push(tokens[7].clone());
 
-        let cmp = new_expression(ExpressionNode::assignment_expression(
-            new_expression(ExpressionNode::array_index_expression(
+        let cmp = ExpressionNode::assignment_expression(
+            ExpressionNode::array_index_expression(
                 tokens[2].clone(),
-                new_expression(ExpressionNode::variable_expression(
-                    tokens[0].clone(),
-                    variable_a,
-                )),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(1))),
-            )),
+                ExpressionNode::variable_expression(tokens[0].clone(), variable_a).wrapped(),
+                ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(1)).wrapped(),
+            )
+            .wrapped(),
             tokens[5].clone(),
-            new_expression(ExpressionNode::array_index_expression(
+            ExpressionNode::array_index_expression(
                 tokens[8].clone(),
-                new_expression(ExpressionNode::variable_expression(
-                    tokens[6].clone(),
-                    variable_b,
-                )),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(0))),
-            )),
-        ));
+                ExpressionNode::variable_expression(tokens[6].clone(), variable_b).wrapped(),
+                ExpressionNode::literal_expression(tokens[9].clone(), Value::Integer(0)).wrapped(),
+            )
+            .wrapped(),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_expression().unwrap(), cmp);
@@ -1148,18 +1337,21 @@ mod test_if {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = new_statement(StatementNode::if_statement(
+        let cmp = StatementNode::if_statement(
             tokens[0].clone(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(12))),
+            ExpressionNode::binary_expression(
+                ExpressionNode::literal_expression(tokens[1].clone(), Value::Integer(12)).wrapped(),
                 tokens[2].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(44))),
-            )),
-            vec![new_statement(StatementNode::expression_statement(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(2))),
-            ))],
+                ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(44)).wrapped(),
+            )
+            .wrapped(),
+            vec![StatementNode::expression_statement(
+                ExpressionNode::literal_expression(tokens[5].clone(), Value::Integer(2)).wrapped(),
+            )
+            .wrapped()],
             None,
-        ));
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
@@ -1185,20 +1377,24 @@ mod test_if {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = new_statement(StatementNode::if_statement(
+        let cmp = StatementNode::if_statement(
             tokens[0].clone(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(12))),
+            ExpressionNode::binary_expression(
+                ExpressionNode::literal_expression(tokens[1].clone(), Value::Integer(12)).wrapped(),
                 tokens[2].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(44))),
-            )),
-            vec![new_statement(StatementNode::expression_statement(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(2))),
-            ))],
-            Some(vec![new_statement(StatementNode::expression_statement(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(3))),
-            ))]),
-        ));
+                ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(44)).wrapped(),
+            )
+            .wrapped(),
+            vec![StatementNode::expression_statement(
+                ExpressionNode::literal_expression(tokens[5].clone(), Value::Integer(2)).wrapped(),
+            )
+            .wrapped()],
+            Some(vec![StatementNode::expression_statement(
+                ExpressionNode::literal_expression(tokens[9].clone(), Value::Integer(3)).wrapped(),
+            )
+            .wrapped()]),
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
@@ -1249,17 +1445,20 @@ mod test_while {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = new_statement(StatementNode::while_statement(
+        let cmp = StatementNode::while_statement(
             tokens[0].clone(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(12))),
+            ExpressionNode::binary_expression(
+                ExpressionNode::literal_expression(tokens[1].clone(), Value::Integer(12)).wrapped(),
                 tokens[2].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(44))),
-            )),
-            vec![new_statement(StatementNode::expression_statement(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(2))),
-            ))],
-        ));
+                ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(44)).wrapped(),
+            )
+            .wrapped(),
+            vec![StatementNode::expression_statement(
+                ExpressionNode::literal_expression(tokens[5].clone(), Value::Integer(2)).wrapped(),
+            )
+            .wrapped()],
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
@@ -1290,25 +1489,33 @@ mod test_while {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = new_statement(StatementNode::while_statement(
+        let cmp = StatementNode::while_statement(
             tokens[0].clone(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(12))),
+            ExpressionNode::binary_expression(
+                ExpressionNode::literal_expression(tokens[1].clone(), Value::Integer(12)).wrapped(),
                 tokens[2].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(44))),
-            )),
-            vec![new_statement(StatementNode::while_statement(
+                ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(44)).wrapped(),
+            )
+            .wrapped(),
+            vec![StatementNode::while_statement(
                 tokens[5].clone(),
-                new_expression(ExpressionNode::binary_expression(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(12))),
+                ExpressionNode::binary_expression(
+                    ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(12))
+                        .wrapped(),
                     tokens[7].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(44))),
-                )),
-                vec![new_statement(StatementNode::expression_statement(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(2))),
-                ))],
-            ))],
-        ));
+                    ExpressionNode::literal_expression(tokens[8].clone(), Value::Integer(44))
+                        .wrapped(),
+                )
+                .wrapped(),
+                vec![StatementNode::expression_statement(
+                    ExpressionNode::literal_expression(tokens[10].clone(), Value::Integer(2))
+                        .wrapped(),
+                )
+                .wrapped()],
+            )
+            .wrapped()],
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
@@ -1339,26 +1546,34 @@ mod test_while {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = new_statement(StatementNode::while_statement(
+        let cmp = StatementNode::while_statement(
             tokens[0].clone(),
-            new_expression(ExpressionNode::binary_expression(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(12))),
+            ExpressionNode::binary_expression(
+                ExpressionNode::literal_expression(tokens[1].clone(), Value::Integer(12)).wrapped(),
                 tokens[2].clone(),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(44))),
-            )),
-            vec![new_statement(StatementNode::if_statement(
+                ExpressionNode::literal_expression(tokens[3].clone(), Value::Integer(44)).wrapped(),
+            )
+            .wrapped(),
+            vec![StatementNode::if_statement(
                 tokens[5].clone(),
-                new_expression(ExpressionNode::binary_expression(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(12))),
+                ExpressionNode::binary_expression(
+                    ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(12))
+                        .wrapped(),
                     tokens[7].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(44))),
-                )),
-                vec![new_statement(StatementNode::expression_statement(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(2))),
-                ))],
+                    ExpressionNode::literal_expression(tokens[8].clone(), Value::Integer(44))
+                        .wrapped(),
+                )
+                .wrapped(),
+                vec![StatementNode::expression_statement(
+                    ExpressionNode::literal_expression(tokens[10].clone(), Value::Integer(2))
+                        .wrapped(),
+                )
+                .wrapped()],
                 None,
-            ))],
-        ));
+            )
+            .wrapped()],
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
@@ -1433,16 +1648,18 @@ mod test_for {
             (TokenType::CloseRoundBraceToken, ")"),
         ]);
 
-        let cmp = new_statement(StatementNode::for_statement(
+        let cmp = StatementNode::for_statement(
             tokens[0].clone(),
             tokens[1].clone(),
-            new_expression(ExpressionNode::literal_expression(Value::Integer(0))),
-            new_expression(ExpressionNode::literal_expression(Value::Integer(10))),
-            new_expression(ExpressionNode::literal_expression(Value::Integer(1))),
-            vec![new_statement(StatementNode::expression_statement(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(2))),
-            ))],
-        ));
+            ExpressionNode::literal_expression(tokens[4].clone(), Value::Integer(0)).wrapped(),
+            ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(10)).wrapped(),
+            ExpressionNode::literal_expression(tokens[8].clone(), Value::Integer(1)).wrapped(),
+            vec![StatementNode::expression_statement(
+                ExpressionNode::literal_expression(tokens[11].clone(), Value::Integer(2)).wrapped(),
+            )
+            .wrapped()],
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
@@ -1474,16 +1691,18 @@ mod test_for {
         let mut var = Variable::new();
         var.push(tokens[9].clone());
 
-        let cmp = new_statement(StatementNode::for_statement(
+        let cmp = StatementNode::for_statement(
             tokens[0].clone(),
             tokens[1].clone(),
-            new_expression(ExpressionNode::literal_expression(Value::Integer(0))),
-            new_expression(ExpressionNode::literal_expression(Value::Integer(10))),
-            new_expression(ExpressionNode::variable_expression(tokens[8].clone(), var)),
-            vec![new_statement(StatementNode::expression_statement(
-                new_expression(ExpressionNode::literal_expression(Value::Integer(2))),
-            ))],
-        ));
+            ExpressionNode::literal_expression(tokens[4].clone(), Value::Integer(0)).wrapped(),
+            ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(10)).wrapped(),
+            ExpressionNode::variable_expression(tokens[8].clone(), var).wrapped(),
+            vec![StatementNode::expression_statement(
+                ExpressionNode::literal_expression(tokens[12].clone(), Value::Integer(2)).wrapped(),
+            )
+            .wrapped()],
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
         assert_eq!(parser.parse_statement().unwrap(), cmp);
@@ -1506,13 +1725,14 @@ mod test_function_definition {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::function_statement(
+        let cmp = StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
             Vec::new(),
             None,
             Vec::new(),
-        ));
+        )
+        .wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -1537,13 +1757,14 @@ mod test_function_definition {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::function_statement(
+        let cmp = StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
             vec![(tokens[3].clone(), Type::Integer)],
             None,
             Vec::new(),
-        ));
+        )
+        .wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -1610,7 +1831,7 @@ mod test_function_definition {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::function_statement(
+        let cmp = StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
             vec![
@@ -1632,7 +1853,8 @@ mod test_function_definition {
             ],
             None,
             Vec::new(),
-        ));
+        )
+        .wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -1656,18 +1878,21 @@ mod test_function_definition {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::function_statement(
+        let cmp = StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
             Vec::new(),
             Some(Type::Integer),
-            vec![new_statement(StatementNode::return_statement(
+            vec![StatementNode::return_statement(
                 tokens[5].clone(),
-                Some(new_expression(ExpressionNode::literal_expression(
-                    Value::Integer(12),
-                ))),
-            ))],
-        ));
+                Some(
+                    ExpressionNode::literal_expression(tokens[6].clone(), Value::Integer(12))
+                        .wrapped(),
+                ),
+            )
+            .wrapped()],
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
 
@@ -1695,13 +1920,14 @@ mod test_function_definition {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::function_statement(
+        let cmp = StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
             vec![(tokens[3].clone(), Type::Integer)],
             Some(Type::Integer),
             Vec::new(),
-        ));
+        )
+        .wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -1722,16 +1948,14 @@ mod test_function_definition {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::function_statement(
+        let cmp = StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
             Vec::new(),
             None,
-            vec![new_statement(StatementNode::return_statement(
-                tokens[3].clone(),
-                None,
-            ))],
-        ));
+            vec![StatementNode::return_statement(tokens[3].clone(), None).wrapped()],
+        )
+        .wrapped();
 
         let mut parser = Parser::new(tokens);
 
@@ -1752,7 +1976,7 @@ mod test_function_definition {
             (TokenType::RightArrowToken, "<-"),
             (TokenType::IdentifierToken, "int"),
             (TokenType::NewLineToken, "\n"),
-            (TokenType::IntegerLiteralToken, "5"),
+            (TokenType::IntegerLiteralToken, "5"), // 11
             (TokenType::PlusToken, "+"),
             (TokenType::IntegerLiteralToken, "5"),
             (TokenType::NewLineToken, "\n"),
@@ -1763,19 +1987,24 @@ mod test_function_definition {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::function_statement(
+        let cmp = StatementNode::function_statement(
             tokens[0].clone(),
             tokens[1].clone(),
             vec![(tokens[3].clone(), Type::Integer)],
             Some(Type::Integer),
-            vec![new_statement(StatementNode::expression_statement(
-                new_expression(ExpressionNode::binary_expression(
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(5))),
+            vec![StatementNode::expression_statement(
+                ExpressionNode::binary_expression(
+                    ExpressionNode::literal_expression(tokens[11].clone(), Value::Integer(5))
+                        .wrapped(),
                     tokens[12].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(5))),
-                )),
-            ))],
-        ));
+                    ExpressionNode::literal_expression(tokens[13].clone(), Value::Integer(5))
+                        .wrapped(),
+                )
+                .wrapped(),
+            )
+            .wrapped()],
+        )
+        .wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -1798,11 +2027,9 @@ mod test_struct_definition {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::struct_statement(
-            tokens[0].clone(),
-            tokens[1].clone(),
-            HashMap::new(),
-        ));
+        let cmp =
+            StatementNode::struct_statement(tokens[0].clone(), tokens[1].clone(), HashMap::new())
+                .wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -1826,11 +2053,12 @@ mod test_struct_definition {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::struct_statement(
+        let cmp = StatementNode::struct_statement(
             tokens[0].clone(),
             tokens[1].clone(),
             hashmap!["field_a".to_string() ; Type::Integer],
-        ));
+        )
+        .wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -1869,7 +2097,7 @@ mod test_struct_definition {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::struct_statement(
+        let cmp = StatementNode::struct_statement(
             tokens[0].clone(),
             tokens[1].clone(),
             hashmap![
@@ -1878,7 +2106,8 @@ mod test_struct_definition {
                 "field_c".to_string() ; Type::Character,
                 "field_d".to_string() ; Type::Float
             ],
-        ));
+        )
+        .wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -1910,14 +2139,14 @@ mod test_struct_definition {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::struct_statement(
+        let cmp = StatementNode::struct_statement(
             tokens[0].clone(),
             tokens[1].clone(),
             hashmap![
                 "field_a".to_string() ; Type::Integer,
                 "field_b".to_string() ; Type::Struct {name: "string".to_string(), module: "std".to_string() }
             ],
-        ));
+        ).wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -1977,10 +2206,11 @@ mod test_preprocessor_command {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::pre_processor_command_statement(
+        let cmp = StatementNode::pre_processor_command_statement(
             tokens[1].clone(),
             PreProcessorCommand::BeginModuleCommand(tokens[2].clone()),
-        ));
+        )
+        .wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -1997,10 +2227,11 @@ mod test_preprocessor_command {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::pre_processor_command_statement(
+        let cmp = StatementNode::pre_processor_command_statement(
             tokens[1].clone(),
             PreProcessorCommand::ImportCommand(tokens[4].clone(), vec![tokens[2].clone()]),
-        ));
+        )
+        .wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -2019,13 +2250,14 @@ mod test_preprocessor_command {
             (TokenType::NewLineToken, "\n"),
         ]);
 
-        let cmp = new_statement(StatementNode::pre_processor_command_statement(
+        let cmp = StatementNode::pre_processor_command_statement(
             tokens[1].clone(),
             PreProcessorCommand::ImportCommand(
                 tokens[6].clone(),
                 vec![tokens[2].clone(), tokens[4].clone()],
             ),
-        ));
+        )
+        .wrapped();
         let mut parser = Parser::new(tokens);
 
         assert_eq!(parser.parse_top_level_statement().unwrap(), cmp);
@@ -2090,19 +2322,21 @@ mod test_sample_program {
         ]);
 
         let mut cmp = AST::new();
-        cmp.push_statement(new_statement(
+        cmp.push_statement(
             StatementNode::pre_processor_command_statement(
                 tokens[1].clone(),
                 PreProcessorCommand::BeginModuleCommand(tokens[2].clone()),
-            ),
-        ));
+            )
+            .wrapped(),
+        );
 
-        cmp.push_statement(new_statement(
+        cmp.push_statement(
             StatementNode::pre_processor_command_statement(
                 tokens[5].clone(),
                 PreProcessorCommand::ImportCommand(tokens[8].clone(), vec![tokens[6].clone()]),
-            ),
-        ));
+            )
+            .wrapped(),
+        );
 
         let mut var_a_2 = Variable::new();
         var_a_2.push(tokens[30].clone());
@@ -2110,42 +2344,48 @@ mod test_sample_program {
         let mut var_b_2 = Variable::new();
         var_b_2.push(tokens[33].clone());
 
-        cmp.push_statement(new_statement(StatementNode::function_statement(
-            tokens[11].clone(),
-            tokens[12].clone(),
-            Vec::new(),
-            Some(Type::Integer),
-            vec![
-                new_statement(StatementNode::variable_declaration_statement(
-                    tokens[16].clone(),
-                    tokens[17].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(5))),
-                )),
-                new_statement(StatementNode::variable_declaration_statement(
-                    tokens[21].clone(),
-                    tokens[22].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(12))),
-                )),
-                new_statement(StatementNode::expression_statement(new_expression(
-                    ExpressionNode::call_expression(
-                        tokens[26].clone(),
-                        None,
-                        tokens[27].clone(),
-                        vec![new_expression(ExpressionNode::binary_expression(
-                            new_expression(ExpressionNode::variable_expression(
-                                tokens[29].clone(),
-                                var_a_2,
-                            )),
-                            tokens[31].clone(),
-                            new_expression(ExpressionNode::variable_expression(
-                                tokens[32].clone(),
-                                var_b_2,
-                            )),
-                        ))],
-                    ),
-                ))),
-            ],
-        )));
+        cmp.push_statement(
+            StatementNode::function_statement(
+                tokens[11].clone(),
+                tokens[12].clone(),
+                Vec::new(),
+                Some(Type::Integer),
+                vec![
+                    StatementNode::variable_declaration_statement(
+                        tokens[16].clone(),
+                        tokens[17].clone(),
+                        ExpressionNode::literal_expression(tokens[19].clone(), Value::Integer(5))
+                            .wrapped(),
+                    )
+                    .wrapped(),
+                    StatementNode::variable_declaration_statement(
+                        tokens[21].clone(),
+                        tokens[22].clone(),
+                        ExpressionNode::literal_expression(tokens[24].clone(), Value::Integer(12))
+                            .wrapped(),
+                    )
+                    .wrapped(),
+                    StatementNode::expression_statement(
+                        ExpressionNode::call_expression(
+                            tokens[26].clone(),
+                            None,
+                            tokens[27].clone(),
+                            vec![ExpressionNode::binary_expression(
+                                ExpressionNode::variable_expression(tokens[29].clone(), var_a_2)
+                                    .wrapped(),
+                                tokens[31].clone(),
+                                ExpressionNode::variable_expression(tokens[32].clone(), var_b_2)
+                                    .wrapped(),
+                            )
+                            .wrapped()],
+                        )
+                        .wrapped(),
+                    )
+                    .wrapped(),
+                ],
+            )
+            .wrapped(),
+        );
 
         let parser = Parser::new(tokens);
 
@@ -2168,19 +2408,21 @@ mod test_sample_program {
         let tokens = lexer.tokenize().unwrap();
 
         let mut cmp = AST::new();
-        cmp.push_statement(new_statement(
+        cmp.push_statement(
             StatementNode::pre_processor_command_statement(
                 tokens[1].clone(),
                 PreProcessorCommand::BeginModuleCommand(tokens[2].clone()),
-            ),
-        ));
+            )
+            .wrapped(),
+        );
 
-        cmp.push_statement(new_statement(
+        cmp.push_statement(
             StatementNode::pre_processor_command_statement(
                 tokens[5].clone(),
                 PreProcessorCommand::ImportCommand(tokens[8].clone(), vec![tokens[6].clone()]),
-            ),
-        ));
+            )
+            .wrapped(),
+        );
 
         let mut var_a_2 = Variable::new();
         var_a_2.push(tokens[30].clone());
@@ -2188,42 +2430,48 @@ mod test_sample_program {
         let mut var_b_2 = Variable::new();
         var_b_2.push(tokens[33].clone());
 
-        cmp.push_statement(new_statement(StatementNode::function_statement(
-            tokens[11].clone(),
-            tokens[12].clone(),
-            Vec::new(),
-            Some(Type::Integer),
-            vec![
-                new_statement(StatementNode::variable_declaration_statement(
-                    tokens[16].clone(),
-                    tokens[17].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(5))),
-                )),
-                new_statement(StatementNode::variable_declaration_statement(
-                    tokens[21].clone(),
-                    tokens[22].clone(),
-                    new_expression(ExpressionNode::literal_expression(Value::Integer(12))),
-                )),
-                new_statement(StatementNode::expression_statement(new_expression(
-                    ExpressionNode::call_expression(
-                        tokens[26].clone(),
-                        None,
-                        tokens[27].clone(),
-                        vec![new_expression(ExpressionNode::binary_expression(
-                            new_expression(ExpressionNode::variable_expression(
-                                tokens[29].clone(),
-                                var_a_2,
-                            )),
-                            tokens[31].clone(),
-                            new_expression(ExpressionNode::variable_expression(
-                                tokens[32].clone(),
-                                var_b_2,
-                            )),
-                        ))],
-                    ),
-                ))),
-            ],
-        )));
+        cmp.push_statement(
+            StatementNode::function_statement(
+                tokens[11].clone(),
+                tokens[12].clone(),
+                Vec::new(),
+                Some(Type::Integer),
+                vec![
+                    StatementNode::variable_declaration_statement(
+                        tokens[16].clone(),
+                        tokens[17].clone(),
+                        ExpressionNode::literal_expression(tokens[19].clone(), Value::Integer(5))
+                            .wrapped(),
+                    )
+                    .wrapped(),
+                    StatementNode::variable_declaration_statement(
+                        tokens[21].clone(),
+                        tokens[22].clone(),
+                        ExpressionNode::literal_expression(tokens[24].clone(), Value::Integer(12))
+                            .wrapped(),
+                    )
+                    .wrapped(),
+                    StatementNode::expression_statement(
+                        ExpressionNode::call_expression(
+                            tokens[26].clone(),
+                            None,
+                            tokens[27].clone(),
+                            vec![ExpressionNode::binary_expression(
+                                ExpressionNode::variable_expression(tokens[29].clone(), var_a_2)
+                                    .wrapped(),
+                                tokens[31].clone(),
+                                ExpressionNode::variable_expression(tokens[32].clone(), var_b_2)
+                                    .wrapped(),
+                            )
+                            .wrapped()],
+                        )
+                        .wrapped(),
+                    )
+                    .wrapped(),
+                ],
+            )
+            .wrapped(),
+        );
 
         let parser = Parser::new(tokens);
 
@@ -2257,10 +2505,10 @@ fn test_block() {
         Token::new(TokenType::NewLineToken, "\n".to_string(), 3, 12, None),
     ];
 
-    let cmp = new_statement(StatementNode::block_statement(
+    let cmp = StatementNode::block_statement(
         Token::new(TokenType::BlockToken, "block".to_string(), 1, 1, None),
-        vec![new_statement(StatementNode::expression_statement(
-            new_expression(ExpressionNode::array_allocation_expression(
+        vec![StatementNode::expression_statement(
+            ExpressionNode::array_allocation_expression(
                 Token::new(
                     TokenType::StringLiteralToken,
                     "string".to_string(),
@@ -2269,10 +2517,23 @@ fn test_block() {
                     None,
                 ),
                 ArrayLiteral::from(&"string".to_string()),
-                new_expression(ExpressionNode::literal_expression(Value::Integer(6))),
-            )),
-        ))],
-    ));
+                ExpressionNode::literal_expression(
+                    Token::new(
+                        TokenType::StringLiteralToken,
+                        "string".to_string(),
+                        2,
+                        1,
+                        None,
+                    ),
+                    Value::Integer(6),
+                )
+                .wrapped(),
+            )
+            .wrapped(),
+        )
+        .wrapped()],
+    )
+    .wrapped();
 
     let mut parser = Parser::new(tokens);
     assert_eq!(parser.parse_statement().unwrap(), cmp);
