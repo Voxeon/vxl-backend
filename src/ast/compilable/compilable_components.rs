@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt;
 use std::rc::Rc;
 
 use crate::ast::compilable::CompilableStatement;
@@ -27,7 +28,8 @@ pub struct CompilableStruct {
 
 pub type CompilableBlock = Rc<RefCell<CompilableBlockNode>>;
 
-#[derive(Debug, PartialEq, Clone)]
+/// Derives cannot be used for Debug, PartialEq etc, because of a potential circular reference due to the parent_block field.
+#[derive(Clone)]
 pub struct CompilableBlockNode {
     pub(crate) parent_block: Option<CompilableBlock>,
     pub(crate) variable_list: HashMap<String, Type>,
@@ -91,13 +93,40 @@ impl CompilableBlockNode {
         return Rc::new(RefCell::new(self));
     }
 
-    pub fn lookup_variable(&self) -> Option<Type> {
-        todo!();
+    pub fn lookup_variable(&self, var_name: &String) -> Option<Type> {
+        if let Some(v) = self.variable_list.get(var_name) {
+            return Some(v.clone());
+        } else {
+            if let Some(p) = self.parent_block.as_ref() {
+                return p.borrow().lookup_variable(var_name);
+            } else {
+                return None;
+            }
+        }
     }
 }
 
 impl Default for CompilableBlockNode {
     fn default() -> Self {
         return Self::new(None, HashMap::new(), Vec::new(), false);
+    }
+}
+
+impl fmt::Debug for CompilableBlockNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CompilableBlockNode")
+            .field("parent_block", &"*EXCLUDED*".to_string())
+            .field("variable_list", &self.variable_list)
+            .field("body", &self.body)
+            .field("always_returns", &self.always_returns)
+            .finish()
+    }
+}
+
+impl PartialEq for CompilableBlockNode {
+    fn eq(&self, other: &Self) -> bool {
+        return self.variable_list == other.variable_list
+            && self.body == other.body
+            && self.always_returns == other.always_returns;
     }
 }

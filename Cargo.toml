@@ -16,6 +16,7 @@ unix-std_library = []
 voxeon_os-std_library = []
 windows-std_library = []
 
+test-intensive-short = ["test-intensive"]
 test-intensive = []
 
 [dependencies]

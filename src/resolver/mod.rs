@@ -1398,8 +1398,7 @@ impl Resolver {
 
         let root_struct_tp = if let Some(var_tp) = current_block
             .borrow()
-            .variable_list
-            .get(var.path()[0].lexeme())
+            .lookup_variable(var.path()[0].lexeme())
         {
             var_tp.clone()
         } else {
@@ -1530,4 +1529,4 @@ impl Default for Resolver {
 }
 
 #[cfg(test)]
-mod tests;
+mod no_std_tests;

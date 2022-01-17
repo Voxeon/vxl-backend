@@ -24,3 +24,17 @@ impl Into<Vec<Token>> for Variable {
         return self.path;
     }
 }
+
+impl From<Vec<Token>> for Variable {
+    fn from(path: Vec<Token>) -> Self {
+        return Self { path };
+    }
+}
+
+impl From<Vec<&Token>> for Variable {
+    fn from(path: Vec<&Token>) -> Self {
+        return Self {
+            path: path.into_iter().cloned().collect(),
+        };
+    }
+}
