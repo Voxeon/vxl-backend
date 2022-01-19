@@ -400,7 +400,7 @@ mod lexer_tests {
             assert_eq!(
                 tokens,
                 vec![Token::new(
-                    TokenType::DoubleLiteralToken,
+                    TokenType::FloatLiteralToken,
                     "512.0".to_string(),
                     1,
                     1,
@@ -434,7 +434,7 @@ mod lexer_tests {
             assert_eq!(
                 tokens,
                 vec![Token::new(
-                    TokenType::DoubleLiteralToken,
+                    TokenType::FloatLiteralToken,
                     "512000.0".to_string(),
                     1,
                     1,

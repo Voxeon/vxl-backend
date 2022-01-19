@@ -31,5 +31,6 @@ macro_rules! define_intensive_test {
     };
 }
 
+mod expression_tests;
 mod logic_tests;
 mod statement_tests;

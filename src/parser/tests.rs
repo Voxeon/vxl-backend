@@ -90,7 +90,7 @@ mod test_primary {
     #[test]
     fn test_float_literal() {
         let tokens = vec![Token::new(
-            TokenType::DoubleLiteralToken,
+            TokenType::FloatLiteralToken,
             "55.22".to_string(),
             1,
             1,
@@ -102,7 +102,7 @@ mod test_primary {
             parser.parse_expression().unwrap(),
             ExpressionNode::literal_expression(
                 Token::new(
-                    TokenType::DoubleLiteralToken,
+                    TokenType::FloatLiteralToken,
                     "55.22".to_string(),
                     1,
                     1,
@@ -252,9 +252,9 @@ mod test_binary_expression {
     #[test]
     fn test_addition_2() {
         let tokens = new_tokens([
-            (TokenType::DoubleLiteralToken, "55.22"),
+            (TokenType::FloatLiteralToken, "55.22"),
             (TokenType::PlusToken, "+"),
-            (TokenType::DoubleLiteralToken, "52.22"),
+            (TokenType::FloatLiteralToken, "52.22"),
         ]);
 
         let lhs =
@@ -302,9 +302,9 @@ mod test_binary_expression {
     #[test]
     fn test_subtraction_2() {
         let tokens = new_tokens([
-            (TokenType::DoubleLiteralToken, "55.22"),
+            (TokenType::FloatLiteralToken, "55.22"),
             (TokenType::MinusToken, "-"),
-            (TokenType::DoubleLiteralToken, "52.22"),
+            (TokenType::FloatLiteralToken, "52.22"),
         ]);
 
         let lhs =

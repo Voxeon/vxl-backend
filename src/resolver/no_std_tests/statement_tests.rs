@@ -1429,6 +1429,64 @@ mod variable_declaration {
         );
     }
 
+    #[test]
+    fn test_variable_declaration_statement_4() {
+        let mut input = VecDeque::new();
+        let mut root_ast = AST::new();
+
+        root_ast.push_statement(
+            StatementNode::pre_processor_command_statement(
+                Token::new_identifier("begin".to_string(), 1, 1, None),
+                PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
+                    ROOT_MODULE_NAME.to_string(),
+                    1,
+                    1,
+                    None,
+                )),
+            )
+            .wrapped(),
+        );
+
+        let main_function_stmt = StatementNode::function_statement(
+            Token::new_identifier("func".to_string(), 2, 1, None),
+            Token::new_identifier("main".to_string(), 0, 0, None),
+            Vec::new(),
+            None,
+            vec![StatementNode::variable_declaration_statement(
+                Token::new(TokenType::HashToken, "#".to_string(), 0, 0, None),
+                Token::new_identifier("test_var".to_string(), 0, 0, None),
+                ExpressionNode::call_expression(
+                    Token::new(TokenType::AtToken, "@".to_string(), 0, 0, None),
+                    None,
+                    Token::new_identifier("main".to_string(), 0, 0, None),
+                    Vec::new(),
+                )
+                .wrapped(),
+            )
+            .wrapped()],
+        )
+        .wrapped();
+
+        root_ast.push_statement(main_function_stmt.clone());
+
+        input.push_front(root_ast);
+
+        let processed_output = PreProcessor::new(input).process().unwrap();
+        let resolver = Resolver::default()
+            .with_modules(processed_output)
+            .with_standard_library(false);
+
+        assert_eq!(
+            resolver.run().unwrap_err(),
+            ResolverError::variable_declaration_requires_value(Token::new_identifier(
+                "test_var".to_string(),
+                0,
+                0,
+                None
+            ))
+        );
+    }
+
     #[cfg(feature = "test-intensive")]
     mod intensive {
         use super::*;
@@ -1436,5 +1494,6 @@ mod variable_declaration {
         define_intensive_test!(test_variable_declaration_statement_1);
         define_intensive_test!(test_variable_declaration_statement_2);
         define_intensive_test!(test_variable_declaration_statement_3);
+        define_intensive_test!(test_variable_declaration_statement_4);
     }
 }

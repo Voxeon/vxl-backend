@@ -649,8 +649,8 @@ impl Parser {
             return Ok(ExpressionNode::literal_expression(tok, Value::Integer(int)).wrapped());
         }
 
-        if self.matches(TokenType::DoubleLiteralToken) {
-            let tok = self.consume_token_one([TokenType::DoubleLiteralToken])?;
+        if self.matches(TokenType::FloatLiteralToken) {
+            let tok = self.consume_token_one([TokenType::FloatLiteralToken])?;
             let dbl: f64 = match tok.lexeme().parse() {
                 Ok(i) => i,
                 Err(_) => return Err(ParserError::invalid_double_literal(tok)),

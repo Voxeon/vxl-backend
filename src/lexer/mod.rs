@@ -343,7 +343,7 @@ impl Lexer {
         }
 
         let tp = if double {
-            TokenType::DoubleLiteralToken
+            TokenType::FloatLiteralToken
         } else {
             TokenType::IntegerLiteralToken
         };
