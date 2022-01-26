@@ -2733,6 +2733,15 @@ mod test_variable_assignment_expression {
             )
         );
     }
+
+    #[cfg(feature = "test-intensive")]
+    mod intensive {
+        use super::*;
+
+        define_intensive_test!(test_variable_assignment_expression_1);
+        define_intensive_test!(test_variable_assignment_expression_2);
+        define_intensive_test!(test_variable_assignment_expression_3);
+    }
 }
 
 mod test_call_expression {
@@ -3980,5 +3989,13 @@ mod test_array_index_assignment_expression {
                 Some(Type::Boolean)
             )
         );
+    }
+
+    #[cfg(feature = "test-intensive")]
+    mod intensive {
+        use super::*;
+
+        define_intensive_test!(test_array_index_assignment_expression_1);
+        define_intensive_test!(test_array_index_assignment_expression_2);
     }
 }

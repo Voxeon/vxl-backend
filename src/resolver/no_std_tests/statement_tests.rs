@@ -1153,9 +1153,600 @@ mod while_loop {
     }
 }
 
-mod for_loop {}
+mod for_loop {
+    use super::*;
 
-mod if_statement {}
+    #[test]
+    fn test_for_statement_1() {
+        let mut input = VecDeque::new();
+        let mut root_ast = AST::new();
+
+        root_ast.push_statement(
+            StatementNode::pre_processor_command_statement(
+                Token::new_identifier("begin".to_string(), 1, 1, None),
+                PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
+                    ROOT_MODULE_NAME.to_string(),
+                    1,
+                    1,
+                    None,
+                )),
+            )
+            .wrapped(),
+        );
+
+        let for_statement = StatementNode::for_statement(
+            Token::new_identifier("for".to_string(), 0, 0, None),
+            Token::new_identifier("i".to_string(), 0, 0, None),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "0".to_string(), 0, 0, None),
+                Value::Integer(0),
+            )
+            .wrapped(),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "10".to_string(), 0, 0, None),
+                Value::Integer(10),
+            )
+            .wrapped(),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "1".to_string(), 0, 0, None),
+                Value::Integer(1),
+            )
+            .wrapped(),
+            Vec::new(),
+        )
+        .wrapped();
+
+        let main_function_stmt = StatementNode::function_statement(
+            Token::new_identifier("func".to_string(), 2, 1, None),
+            Token::new_identifier("main".to_string(), 0, 0, None),
+            Vec::new(),
+            None,
+            vec![for_statement],
+        )
+        .wrapped();
+
+        root_ast.push_statement(main_function_stmt.clone());
+
+        input.push_front(root_ast);
+
+        let processed_output = PreProcessor::new(input).process().unwrap();
+        let resolver = Resolver::default()
+            .with_modules(processed_output)
+            .with_standard_library(false);
+
+        let function_body =
+            CompilableBlockNode::new(None, HashMap::new(), Vec::new(), false).wrapped();
+
+        let for_body = CompilableBlockNode::new(
+            Some(function_body.clone()),
+            HashMap::new(),
+            Vec::new(),
+            false,
+        )
+        .wrapped();
+
+        function_body.borrow_mut().body = vec![CompilableStatementNode::for_statement(
+            "i".to_string(),
+            CompilableExpressionNode::literal_expression(Value::Integer(0)).wrapped(),
+            CompilableExpressionNode::literal_expression(Value::Integer(10)).wrapped(),
+            CompilableExpressionNode::literal_expression(Value::Integer(1)).wrapped(),
+            for_body,
+        )
+        .wrapped()];
+
+        assert_eq!(
+            resolver.run().unwrap(),
+            CompilableProgram::new(
+                vec![CompilableFunction::new(
+                    "__fn_8_root_main".to_string(),
+                    Vec::new(),
+                    None,
+                    function_body
+                )],
+                Vec::new()
+            )
+        );
+    }
+
+    #[test]
+    fn test_for_statement_2() {
+        let mut input = VecDeque::new();
+        let mut root_ast = AST::new();
+
+        root_ast.push_statement(
+            StatementNode::pre_processor_command_statement(
+                Token::new_identifier("begin".to_string(), 1, 1, None),
+                PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
+                    ROOT_MODULE_NAME.to_string(),
+                    1,
+                    1,
+                    None,
+                )),
+            )
+            .wrapped(),
+        );
+
+        let for_statement = StatementNode::for_statement(
+            Token::new_identifier("for".to_string(), 0, 0, None),
+            Token::new_identifier("i".to_string(), 0, 0, None),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::TrueToken, "true".to_string(), 0, 0, None),
+                Value::Boolean(true),
+            )
+            .wrapped(),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "0".to_string(), 0, 0, None),
+                Value::Integer(0),
+            )
+            .wrapped(),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "10".to_string(), 0, 0, None),
+                Value::Integer(10),
+            )
+            .wrapped(),
+            Vec::new(),
+        )
+        .wrapped();
+
+        let main_function_stmt = StatementNode::function_statement(
+            Token::new_identifier("func".to_string(), 2, 1, None),
+            Token::new_identifier("main".to_string(), 0, 0, None),
+            Vec::new(),
+            None,
+            vec![for_statement],
+        )
+        .wrapped();
+
+        root_ast.push_statement(main_function_stmt.clone());
+
+        input.push_front(root_ast);
+
+        let processed_output = PreProcessor::new(input).process().unwrap();
+        let resolver = Resolver::default()
+            .with_modules(processed_output)
+            .with_standard_library(false);
+
+        assert_eq!(
+            resolver.run().unwrap_err(),
+            ResolverError::invalid_start_for_loop_type(
+                Token::new_identifier("for".to_string(), 0, 0, None),
+                Some(Type::Boolean),
+            )
+        );
+    }
+
+    #[test]
+    fn test_for_statement_3() {
+        let mut input = VecDeque::new();
+        let mut root_ast = AST::new();
+
+        root_ast.push_statement(
+            StatementNode::pre_processor_command_statement(
+                Token::new_identifier("begin".to_string(), 1, 1, None),
+                PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
+                    ROOT_MODULE_NAME.to_string(),
+                    1,
+                    1,
+                    None,
+                )),
+            )
+            .wrapped(),
+        );
+
+        let for_statement = StatementNode::for_statement(
+            Token::new_identifier("for".to_string(), 0, 0, None),
+            Token::new_identifier("i".to_string(), 0, 0, None),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "0".to_string(), 0, 0, None),
+                Value::Integer(0),
+            )
+            .wrapped(),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::TrueToken, "true".to_string(), 0, 0, None),
+                Value::Boolean(true),
+            )
+            .wrapped(),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "10".to_string(), 0, 0, None),
+                Value::Integer(10),
+            )
+            .wrapped(),
+            Vec::new(),
+        )
+        .wrapped();
+
+        let main_function_stmt = StatementNode::function_statement(
+            Token::new_identifier("func".to_string(), 2, 1, None),
+            Token::new_identifier("main".to_string(), 0, 0, None),
+            Vec::new(),
+            None,
+            vec![for_statement],
+        )
+        .wrapped();
+
+        root_ast.push_statement(main_function_stmt.clone());
+
+        input.push_front(root_ast);
+
+        let processed_output = PreProcessor::new(input).process().unwrap();
+        let resolver = Resolver::default()
+            .with_modules(processed_output)
+            .with_standard_library(false);
+
+        assert_eq!(
+            resolver.run().unwrap_err(),
+            ResolverError::invalid_stop_for_loop_type(
+                Token::new_identifier("for".to_string(), 0, 0, None),
+                Some(Type::Boolean),
+            )
+        );
+    }
+
+    #[test]
+    fn test_for_statement_4() {
+        let mut input = VecDeque::new();
+        let mut root_ast = AST::new();
+
+        root_ast.push_statement(
+            StatementNode::pre_processor_command_statement(
+                Token::new_identifier("begin".to_string(), 1, 1, None),
+                PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
+                    ROOT_MODULE_NAME.to_string(),
+                    1,
+                    1,
+                    None,
+                )),
+            )
+            .wrapped(),
+        );
+
+        let for_statement = StatementNode::for_statement(
+            Token::new_identifier("for".to_string(), 0, 0, None),
+            Token::new_identifier("i".to_string(), 0, 0, None),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "0".to_string(), 0, 0, None),
+                Value::Integer(0),
+            )
+            .wrapped(),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "10".to_string(), 0, 0, None),
+                Value::Integer(10),
+            )
+            .wrapped(),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::TrueToken, "true".to_string(), 0, 0, None),
+                Value::Boolean(true),
+            )
+            .wrapped(),
+            Vec::new(),
+        )
+        .wrapped();
+
+        let main_function_stmt = StatementNode::function_statement(
+            Token::new_identifier("func".to_string(), 2, 1, None),
+            Token::new_identifier("main".to_string(), 0, 0, None),
+            Vec::new(),
+            None,
+            vec![for_statement],
+        )
+        .wrapped();
+
+        root_ast.push_statement(main_function_stmt.clone());
+
+        input.push_front(root_ast);
+
+        let processed_output = PreProcessor::new(input).process().unwrap();
+        let resolver = Resolver::default()
+            .with_modules(processed_output)
+            .with_standard_library(false);
+
+        assert_eq!(
+            resolver.run().unwrap_err(),
+            ResolverError::invalid_step_for_loop_type(
+                Token::new_identifier("for".to_string(), 0, 0, None),
+                Some(Type::Boolean),
+            )
+        );
+    }
+
+    /// Due to requirements around prevent circular comparisons, to ensure the variable is accessible we can just attempt to access it
+    #[test]
+    fn test_for_statement_5() {
+        let mut input = VecDeque::new();
+        let mut root_ast = AST::new();
+
+        root_ast.push_statement(
+            StatementNode::pre_processor_command_statement(
+                Token::new_identifier("begin".to_string(), 1, 1, None),
+                PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
+                    ROOT_MODULE_NAME.to_string(),
+                    1,
+                    1,
+                    None,
+                )),
+            )
+            .wrapped(),
+        );
+
+        let for_statement = StatementNode::for_statement(
+            Token::new_identifier("for".to_string(), 0, 0, None),
+            Token::new_identifier("i".to_string(), 0, 0, None),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "0".to_string(), 0, 0, None),
+                Value::Integer(0),
+            )
+            .wrapped(),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "10".to_string(), 0, 0, None),
+                Value::Integer(10),
+            )
+            .wrapped(),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::IntegerLiteralToken, "1".to_string(), 0, 0, None),
+                Value::Integer(1),
+            )
+            .wrapped(),
+            vec![StatementNode::expression_statement(
+                ExpressionNode::variable_expression(
+                    Token::new(TokenType::DollarToken, "$".to_string(), 0, 0, None),
+                    vec![Token::new_identifier("i".to_string(), 0, 0, None)].into(),
+                )
+                .wrapped(),
+            )
+            .wrapped()],
+        )
+        .wrapped();
+
+        let main_function_stmt = StatementNode::function_statement(
+            Token::new_identifier("func".to_string(), 2, 1, None),
+            Token::new_identifier("main".to_string(), 0, 0, None),
+            Vec::new(),
+            None,
+            vec![for_statement],
+        )
+        .wrapped();
+
+        root_ast.push_statement(main_function_stmt.clone());
+
+        input.push_front(root_ast);
+
+        let processed_output = PreProcessor::new(input).process().unwrap();
+        let resolver = Resolver::default()
+            .with_modules(processed_output)
+            .with_standard_library(false);
+
+        let function_body =
+            CompilableBlockNode::new(None, HashMap::new(), Vec::new(), false).wrapped();
+
+        let for_body = CompilableBlockNode::new(
+            Some(function_body.clone()),
+            HashMap::new(),
+            vec![CompilableStatementNode::expression_statement(
+                CompilableExpressionNode::variable_expression(
+                    vec![Token::new_identifier("i".to_string(), 0, 0, None)].into(),
+                )
+                .wrapped(),
+                Some(Type::Integer),
+            )
+            .wrapped()],
+            false,
+        )
+        .wrapped();
+
+        function_body.borrow_mut().body = vec![CompilableStatementNode::for_statement(
+            "i".to_string(),
+            CompilableExpressionNode::literal_expression(Value::Integer(0)).wrapped(),
+            CompilableExpressionNode::literal_expression(Value::Integer(10)).wrapped(),
+            CompilableExpressionNode::literal_expression(Value::Integer(1)).wrapped(),
+            for_body,
+        )
+        .wrapped()];
+
+        assert_eq!(
+            resolver.run().unwrap(),
+            CompilableProgram::new(
+                vec![CompilableFunction::new(
+                    "__fn_8_root_main".to_string(),
+                    Vec::new(),
+                    None,
+                    function_body
+                )],
+                Vec::new()
+            )
+        );
+    }
+
+    #[cfg(feature = "test-intensive")]
+    mod intensive {
+        use super::*;
+
+        define_intensive_test!(test_for_statement_1);
+        define_intensive_test!(test_for_statement_2);
+        define_intensive_test!(test_for_statement_3);
+        define_intensive_test!(test_for_statement_4);
+        define_intensive_test!(test_for_statement_5);
+    }
+}
+
+mod if_statement {
+    use super::*;
+
+    #[test]
+    fn test_if_statement_1() {
+        let mut input = VecDeque::new();
+        let mut root_ast = AST::new();
+
+        root_ast.push_statement(
+            StatementNode::pre_processor_command_statement(
+                Token::new_identifier("begin".to_string(), 1, 1, None),
+                PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
+                    ROOT_MODULE_NAME.to_string(),
+                    1,
+                    1,
+                    None,
+                )),
+            )
+            .wrapped(),
+        );
+
+        let if_statement = StatementNode::if_statement(
+            Token::new_identifier("if".to_string(), 0, 0, None),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::TrueToken, "true".to_string(), 0, 0, None),
+                Value::Boolean(true),
+            )
+            .wrapped(),
+            Vec::new(),
+            None,
+        )
+        .wrapped();
+
+        let main_function_stmt = StatementNode::function_statement(
+            Token::new_identifier("func".to_string(), 2, 1, None),
+            Token::new_identifier("main".to_string(), 0, 0, None),
+            Vec::new(),
+            None,
+            vec![if_statement],
+        )
+        .wrapped();
+
+        root_ast.push_statement(main_function_stmt.clone());
+
+        input.push_front(root_ast);
+
+        let processed_output = PreProcessor::new(input).process().unwrap();
+        let resolver = Resolver::default()
+            .with_modules(processed_output)
+            .with_standard_library(false);
+
+        let function_body =
+            CompilableBlockNode::new(None, HashMap::new(), Vec::new(), false).wrapped();
+
+        let if_body = CompilableBlockNode::new(
+            Some(function_body.clone()),
+            HashMap::new(),
+            Vec::new(),
+            false,
+        )
+        .wrapped();
+
+        function_body.borrow_mut().body = vec![CompilableStatementNode::if_statement(
+            CompilableExpressionNode::literal_expression(Value::Boolean(true)).wrapped(),
+            if_body,
+            None,
+        )
+        .wrapped()];
+
+        assert_eq!(
+            resolver.run().unwrap(),
+            CompilableProgram::new(
+                vec![CompilableFunction::new(
+                    "__fn_8_root_main".to_string(),
+                    Vec::new(),
+                    None,
+                    function_body
+                )],
+                Vec::new()
+            )
+        );
+    }
+
+    #[test]
+    fn test_if_statement_2() {
+        let mut input = VecDeque::new();
+        let mut root_ast = AST::new();
+
+        root_ast.push_statement(
+            StatementNode::pre_processor_command_statement(
+                Token::new_identifier("begin".to_string(), 1, 1, None),
+                PreProcessorCommand::BeginModuleCommand(Token::new_identifier(
+                    ROOT_MODULE_NAME.to_string(),
+                    1,
+                    1,
+                    None,
+                )),
+            )
+            .wrapped(),
+        );
+
+        let if_statement = StatementNode::if_statement(
+            Token::new_identifier("if".to_string(), 0, 0, None),
+            ExpressionNode::literal_expression(
+                Token::new(TokenType::TrueToken, "true".to_string(), 0, 0, None),
+                Value::Boolean(true),
+            )
+            .wrapped(),
+            Vec::new(),
+            Some(Vec::new()),
+        )
+        .wrapped();
+
+        let main_function_stmt = StatementNode::function_statement(
+            Token::new_identifier("func".to_string(), 2, 1, None),
+            Token::new_identifier("main".to_string(), 0, 0, None),
+            Vec::new(),
+            None,
+            vec![if_statement],
+        )
+        .wrapped();
+
+        root_ast.push_statement(main_function_stmt.clone());
+
+        input.push_front(root_ast);
+
+        let processed_output = PreProcessor::new(input).process().unwrap();
+        let resolver = Resolver::default()
+            .with_modules(processed_output)
+            .with_standard_library(false);
+
+        let function_body =
+            CompilableBlockNode::new(None, HashMap::new(), Vec::new(), false).wrapped();
+
+        let if_body = CompilableBlockNode::new(
+            Some(function_body.clone()),
+            HashMap::new(),
+            Vec::new(),
+            false,
+        )
+        .wrapped();
+
+        let else_body = CompilableBlockNode::new(
+            Some(function_body.clone()),
+            HashMap::new(),
+            Vec::new(),
+            false,
+        )
+        .wrapped();
+
+        function_body.borrow_mut().body = vec![CompilableStatementNode::if_statement(
+            CompilableExpressionNode::literal_expression(Value::Boolean(true)).wrapped(),
+            if_body,
+            Some(else_body),
+        )
+        .wrapped()];
+
+        assert_eq!(
+            resolver.run().unwrap(),
+            CompilableProgram::new(
+                vec![CompilableFunction::new(
+                    "__fn_8_root_main".to_string(),
+                    Vec::new(),
+                    None,
+                    function_body
+                )],
+                Vec::new()
+            )
+        );
+    }
+
+    #[cfg(feature = "test-intensive")]
+    mod intensive {
+        use super::*;
+
+        define_intensive_test!(test_if_statement_1);
+        define_intensive_test!(test_if_statement_2);
+    }
+}
 
 mod variable_declaration {
     use super::*;
