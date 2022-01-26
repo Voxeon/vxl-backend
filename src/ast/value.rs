@@ -80,3 +80,12 @@ impl From<&String> for ArrayLiteral {
         };
     }
 }
+
+impl From<&str> for ArrayLiteral {
+    fn from(s: &str) -> Self {
+        return Self {
+            contents: s.chars().map(|ch| Value::Character(ch)).collect(),
+            tp: Type::Character,
+        };
+    }
+}

@@ -1,4 +1,4 @@
-mod stl_trait;
+mod standard_library;
 
 #[cfg(feature = "unix-std_library")]
 mod unix;
@@ -9,4 +9,4 @@ mod voxeon_os;
 #[cfg(feature = "windows-std_library")]
 mod windows;
 
-pub use stl_trait::*;
+pub use standard_library::*;

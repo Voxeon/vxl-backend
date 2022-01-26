@@ -1,4 +1,4 @@
-use crate::ast::Type;
+use crate::ast::{Type, Variable};
 use crate::Token;
 use crate::ROOT_MODULE_NAME;
 
@@ -106,7 +106,8 @@ struct_enum_with_functional_inits! {
             field: String
         }
         NoVariableDeclaredWithNameInScope {
-            reference_token: Token
+            function_reference_token: Token,
+            var: Variable
         }
         InvalidAssignmentType {
             reference_token: Token,
@@ -433,12 +434,12 @@ impl fmt::Display for ResolverError {
                     reference_token
                 )
             }
-            ResolverError::NoVariableDeclaredWithNameInScope { reference_token } => {
+            ResolverError::NoVariableDeclaredWithNameInScope { function_reference_token, var } => {
                 write!(
                     f,
                     "There is no variable called \'{}\' in the current scope {}",
-                    reference_token.lexeme(),
-                    reference_token
+                    var,
+                    function_reference_token
                 )
             }
             ResolverError::InvalidAssignmentType {

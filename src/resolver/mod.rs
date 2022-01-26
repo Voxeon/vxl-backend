@@ -1404,6 +1404,7 @@ impl Resolver {
         } else {
             return Err(ResolverError::no_variable_declared_with_name_in_scope(
                 function_reference_token.clone(),
+                var.clone(),
             ));
         };
 

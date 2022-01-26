@@ -18,6 +18,13 @@ pub trait TypeSize {
 const POINTER_SIZE: u64 = 8; // bytes
 
 impl Type {
+    pub fn new_struct(name: &str, module: &str) -> Self {
+        return Self::Struct {
+            name: name.to_string(),
+            module: module.to_string(),
+        };
+    }
+
     pub fn is_same_type(&self, other: &Self) -> bool {
         match (self, other) {
             (Type::Integer, Type::Integer) => {

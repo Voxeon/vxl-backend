@@ -1,4 +1,6 @@
 use crate::Token;
+use itertools::Itertools;
+use std::fmt;
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct Variable {
@@ -36,5 +38,19 @@ impl From<Vec<&Token>> for Variable {
         return Self {
             path: path.into_iter().cloned().collect(),
         };
+    }
+}
+
+impl fmt::Display for Variable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        #[allow(unstable_name_collisions)]
+        let merged: String = self
+            .path
+            .iter()
+            .map(|tok| tok.lexeme().as_str())
+            .intersperse(".")
+            .collect();
+
+        write!(f, "{}", merged)
     }
 }
